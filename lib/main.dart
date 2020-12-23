@@ -18,7 +18,17 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
-String calculateSolution(map) {
+class _MyAppState extends State<MyApp> {
+  String _error = "";
+  final textRecognizer = FirebaseVision.instance.textRecognizer();
+  int bufferSize;
+  List<List<String>> matrix = [];
+  List<List<String>> sequences = [];
+  final List<String> _validHex = ["1C", "FF", "E9", "BD", "55"];
+  String _processing;
+  String _solution;
+
+  static String _calculateSolution(map) {
     List<List<String>> matrix = map["matrix"];
     List<List<String>> sequences = map["sequences"];
     int bufferSize = map["bufferSize"];
@@ -33,17 +43,19 @@ String calculateSolution(map) {
       }
     }
     return maxPath.coords.map((coord) => "\n(${coord[0]}, ${coord[1]}) -> ${matrix[coord[0]][coord[1]]}").join("");
-}
+  }
 
-class _MyAppState extends State<MyApp> {
-  String _error = "";
-  final textRecognizer = FirebaseVision.instance.textRecognizer();
-  int bufferSize;
-  List<List<String>> matrix = [];
-  List<List<String>> sequences = [];
-  final List<String> _validHex = ["1C", "FF", "E9", "BD", "55"];
-  String _processing;
-  String _solution;
+  void computeSolution(String processing) {
+    setState(() {});
+    if (_error.length == 0 && bufferSize != null) {
+      _processing = processing;
+      setState(() {});
+      compute(_calculateSolution, {"bufferSize": bufferSize, "matrix": matrix, "sequences": sequences}).then((solution) {
+        _solution = solution;
+        setState(() {});
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,30 +85,18 @@ class _MyAppState extends State<MyApp> {
                           final VisionText visionText = await textRecognizer.processImage(visionImage);
 
                           List<TextBlock> blocks = List.from(visionText.blocks)..sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left));
-                          List<TextBlock> hexSequences = List.from(blocks.where((block) => !block.text.split(" ").any((possibleHex) => !_validHex.contains(possibleHex))));
-                          SequenceGroup allSequences = SequenceGroup();
-                          for (TextBlock block in hexSequences) {
-                            allSequences.add(SequenceCapture.fromBlock(block));
-                          }
+                          SequenceGroup allSequences = SequenceGroup(blocks.where((block) => !block.text.split(" ").any((possibleHex) => !_validHex.contains(possibleHex))).map((block) => SequenceCapture.fromBlock(block)));
 
                           matrix = List.from(allSequences.get(OrderType.MATRIX).map((seqGroup) => seqGroup.sequence));
                           sequences = List.from(allSequences.get(OrderType.SEQUENCE).map((seqGroup) => seqGroup.sequence));
 
-                          if (sequences.length == 0 || matrix.length == 0 || matrix[0].length != matrix.length) {
+                          if (sequences.length == 0 || matrix.length == 0 || matrix.any((row) => row.length != matrix.length)) {
                             throw Exception("Invalid size");
                           }
                         } catch(e) {
                           _error = "There was an error processing the breach screen. Please try again, and remember that a better quality photo improves the chances of parsing it correctly.";
                         }
-                        setState(() {});
-                        if (_error.length == 0 && bufferSize != null) {
-                          _processing = "Calculating optimal path...";
-                          setState(() {});
-                          compute(calculateSolution, {"bufferSize": bufferSize, "matrix": matrix, "sequences": sequences}).then((solution) {
-                            _solution = solution;
-                            setState(() {});
-                          });
-                        }
+                        computeSolution("Calculating optimal path...");
                       },
                     ),
                   ],
@@ -114,13 +114,7 @@ class _MyAppState extends State<MyApp> {
                           int newBuffer = int.parse(buffer, radix: 10);
                           if (newBuffer != bufferSize) {
                             bufferSize = newBuffer;
-                            _processing = "Recalculating optimal path because of buffer size change...";
-                            setState(() {});
-                            compute(calculateSolution, {"bufferSize": bufferSize, "matrix": matrix, "sequences": sequences}).then((solution) {
-                              _solution = solution;
-                              _processing = null;
-                              setState(() {});
-                            });
+                            computeSolution("Recalculating optimal path because of buffer size change...");
                           }
                         })
                 ),
@@ -163,6 +157,11 @@ enum OrderType { MATRIX, SEQUENCE }
 
 class SequenceGroup {
   List<SequenceCapture> group = [];
+
+  SequenceGroup(Iterable<SequenceCapture> group) {
+    group.forEach((capture) => add(capture));
+  }
+
   void add(SequenceCapture newCapture) {
     bool foundMatch = false;
     for (int i = 0; i < group.length; i++) {
