@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:firebase_ml_vision/firebase_ml_vision.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,19 +18,10 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  String _error = "";
-  final textRecognizer = FirebaseVision.instance.textRecognizer();
-  int bufferSize;
-  List<List<String>> matrix = [];
-  List<List<String>> sequences = [];
-  final List<String> _validHex = ["1C", "FF", "E9", "BD", "55"];
-  String _processing;
-  String _solution;
-
-  void calculateSolution([processingMsg = "Breach parsed correctly, calculating optimal path..."]) async {
-    _processing = processingMsg;
-    setState(() {});
+String calculateSolution(map) {
+    List<List<String>> matrix = map["matrix"];
+    List<List<String>> sequences = map["sequences"];
+    int bufferSize = map["bufferSize"];
     List<Path> allPaths = PathGenerator(matrix, sequences, bufferSize).generate();
     int maxScore = 0;
     Path maxPath = Path([]);
@@ -40,10 +32,18 @@ class _MyAppState extends State<MyApp> {
         maxPath = path;
       }
     }
-    _solution = maxPath.coords.map((coord) => "\n(${coord[0]}, ${coord[1]}) -> ${matrix[coord[0]][coord[1]]}").join("");
-    _processing = null;
-    setState(() {});
-  }
+    return maxPath.coords.map((coord) => "\n(${coord[0]}, ${coord[1]}) -> ${matrix[coord[0]][coord[1]]}").join("");
+}
+
+class _MyAppState extends State<MyApp> {
+  String _error = "";
+  final textRecognizer = FirebaseVision.instance.textRecognizer();
+  int bufferSize;
+  List<List<String>> matrix = [];
+  List<List<String>> sequences = [];
+  final List<String> _validHex = ["1C", "FF", "E9", "BD", "55"];
+  String _processing;
+  String _solution;
 
   @override
   Widget build(BuildContext context) {
@@ -67,9 +67,11 @@ class _MyAppState extends State<MyApp> {
                           _solution = null;
                           matrix = [];
                           sequences = [];
+
                           var file = await ImagePicker.pickImage(source: ImageSource.camera);
                           final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(file);
                           final VisionText visionText = await textRecognizer.processImage(visionImage);
+
                           List<TextBlock> blocks = List.from(visionText.blocks)..sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left));
                           List<TextBlock> hexSequences = List.from(blocks.where((block) => !block.text.split(" ").any((possibleHex) => !_validHex.contains(possibleHex))));
                           SequenceGroup allSequences = SequenceGroup();
@@ -78,7 +80,6 @@ class _MyAppState extends State<MyApp> {
                           }
 
                           matrix = List.from(allSequences.get(OrderType.MATRIX).map((seqGroup) => seqGroup.sequence));
-
                           sequences = List.from(allSequences.get(OrderType.SEQUENCE).map((seqGroup) => seqGroup.sequence));
 
                           if (sequences.length == 0 || matrix.length == 0 || matrix[0].length != matrix.length) {
@@ -87,10 +88,15 @@ class _MyAppState extends State<MyApp> {
                         } catch(e) {
                           _error = "There was an error processing the breach screen. Please try again, and remember that a better quality photo improves the chances of parsing it correctly.";
                         }
-                        if (_error.length == 0 && bufferSize != null) {
-                          calculateSolution();
-                        }
                         setState(() {});
+                        if (_error.length == 0 && bufferSize != null) {
+                          _processing = "Calculating optimal path...";
+                          setState(() {});
+                          compute(calculateSolution, {"bufferSize": bufferSize, "matrix": matrix, "sequences": sequences}).then((solution) {
+                            _solution = solution;
+                            setState(() {});
+                          });
+                        }
                       },
                     ),
                   ],
@@ -104,11 +110,17 @@ class _MyAppState extends State<MyApp> {
                         decoration: new InputDecoration(labelText: "Input your buffer size"),
                         keyboardType: TextInputType.number,
                         inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                        onSubmitted: (buffer) {
+                        onSubmitted: (buffer) async {
                           int newBuffer = int.parse(buffer, radix: 10);
                           if (newBuffer != bufferSize) {
                             bufferSize = newBuffer;
-                            calculateSolution("Recalculating optimal path because of buffer size change...");
+                            _processing = "Recalculating optimal path because of buffer size change...";
+                            setState(() {});
+                            compute(calculateSolution, {"bufferSize": bufferSize, "matrix": matrix, "sequences": sequences}).then((solution) {
+                              _solution = solution;
+                              _processing = null;
+                              setState(() {});
+                            });
                           }
                         })
                 ),
@@ -122,13 +134,24 @@ class _MyAppState extends State<MyApp> {
                 SizedBox(
                   height: 16,
                 ),
-                Text(matrix.length != 0 ? "Parsed Matrix:" : ""),
-                Text(matrix.length != 0 ? matrix.map((row) => "\n" + row.join(" - ") + "\n").toString().replaceAll(",", "").replaceAll("(", "").replaceAll(")", "") : ""),
-                Text(sequences.length != 0 ? "Parsed Sequences:" : ""),
-                Text(sequences.length != 0 ? sequences.map((row) => "\n" + row.join(" - ") + "\n").toString().replaceAll(",", "").replaceAll("(", "").replaceAll(")", "") : ""),
-                Text(_processing != null ? _processing : ""),
-                Text(_solution != null ? "Maximum Reward Path:" : ""),
-                Text(_solution != null ? _solution : "")
+                Row(
+                children: [
+                  Expanded(
+                      flex: 5,
+                      child: Column(children: [
+                        Text(_processing != null ? _processing : ""),
+                        Text(matrix.length != 0 ? "Parsed Matrix:" : ""),
+                        Text(matrix.length != 0 ? matrix.map((row) => "\n" + row.join(" - ") + "\n").toString().replaceAll(",", "").replaceAll("(", "").replaceAll(")", "") : ""),
+                        Text(sequences.length != 0 ? "Parsed Sequences:" : ""),
+                        Text(sequences.length != 0 ? sequences.map((row) => "\n" + row.join(" - ") + "\n").toString().replaceAll(",", "").replaceAll("(", "").replaceAll(")", "") : "")
+                  ])),
+                      Expanded(
+                        flex: 5,
+                        child: Column(children: [
+                          Text(_solution != null ? "Maximum Reward Path:" : ""),
+                          Text(_solution != null ? _solution : "")
+                      ]))
+                ]),
               ],
             ),
           )),
