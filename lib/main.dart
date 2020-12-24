@@ -98,6 +98,8 @@ class _MyAppState extends State<MyApp> {
                           if (file == null) {
                             return;
                           }
+                          _processing = "Parsing breach screen capture...";
+                          setState(() {});
                           final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(file);
                           final VisionText visionText = await textRecognizer.processImage(visionImage);
 
@@ -112,6 +114,7 @@ class _MyAppState extends State<MyApp> {
                           }
                         } catch(e) {
                           _error = "There was an error processing the breach screen. Make sure that both the code matrix and the sequences are clearly visible, and remember that a better quality photo improves the chances of parsing it correctly.";
+                          _processing = null;
                         }
                         computeSolution("Calculating optimal path...");
                       },
