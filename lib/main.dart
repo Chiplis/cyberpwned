@@ -20,16 +20,16 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _error = "";
-  final TextRecognizer textRecognizer = FirebaseVision.instance.textRecognizer();
-  int bufferSize;
-  List<List<String>> matrix = [
+  final TextRecognizer _textRecognizer = FirebaseVision.instance.textRecognizer();
+  int _bufferSize;
+  List<List<String>> _matrix = [
     ["1C", "BD", "55", "E9", "55"],
     ["1C", "BD", "1C", "55", "E9"],
     ["55", "E9", "E9", "BD", "BD"],
     ["55", "FF", "FF", "1C", "1C"],
     ["FF", "E9", "1C", "BD", "FF"]
   ];
-  List<List<String>> sequences = [
+  List<List<String>> _sequences = [
     ["1C", "1C", "55"],
     ["55", "FF", "1C"],
     ["BD", "E9", "BD", "55"],
@@ -62,8 +62,8 @@ class _MyAppState extends State<MyApp> {
                         try {
                           _error = "";
                           _solution = Path([]);
-                          matrix = [];
-                          sequences = [];
+                          _matrix = [];
+                          _sequences = [];
 
                           var file = await ImagePicker.pickImage(source: ImageSource.camera);
 
@@ -75,7 +75,7 @@ class _MyAppState extends State<MyApp> {
                           setState(() {});
 
                           final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(file);
-                          final VisionText visionText = await textRecognizer.processImage(visionImage);
+                          final VisionText visionText = await _textRecognizer.processImage(visionImage);
 
                           // Sort blocks from left to right, so matrix rows are processed first
                           List<TextBlock> blocks = List.from(visionText.blocks)..sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left));
@@ -84,10 +84,10 @@ class _MyAppState extends State<MyApp> {
                               .where((block) => !block.text.split(" ").any((possibleHex) => !_validHex.contains(possibleHex)))
                               .map((block) => SequenceCapture.fromBlock(block)));
 
-                          matrix = List.from(allSequences.get(OrderType.MATRIX).map((seqGroup) => seqGroup.sequence));
-                          sequences = List.from(allSequences.get(OrderType.SEQUENCE).map((seqGroup) => seqGroup.sequence));
+                          _matrix = List.from(allSequences.get(OrderType.MATRIX).map((seqGroup) => seqGroup.sequence));
+                          _sequences = List.from(allSequences.get(OrderType.SEQUENCE).map((seqGroup) => seqGroup.sequence));
 
-                          if (sequences.length == 0 || matrix.length == 0 || matrix.any((row) => row.length != matrix.length)) {
+                          if (_sequences.length == 0 || _matrix.length == 0 || _matrix.any((row) => row.length != _matrix.length)) {
                             throw Exception("Invalid size");
                           }
                         } catch (e) {
@@ -115,9 +115,9 @@ class _MyAppState extends State<MyApp> {
                         inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                         onSubmitted: (buffer) async {
                           int newBuffer = int.parse(buffer, radix: 10);
-                          if (newBuffer != bufferSize) {
-                            String processing = bufferSize == null ? "Calculating optimal path" : "Recalculating optimal path...";
-                            bufferSize = newBuffer;
+                          if (newBuffer != _bufferSize) {
+                            String processing = _bufferSize == null ? "Calculating optimal path" : "Recalculating optimal path...";
+                            _bufferSize = newBuffer;
                             _computeSolution(processing);
                           }
                         })),
@@ -125,7 +125,7 @@ class _MyAppState extends State<MyApp> {
                   Text(_processing != null ? _processing : "", style: TextStyle(color: Colors.white)),
                   Container(
                       child: Table(
-                          children: matrix
+                          children: _matrix
                               .asMap() // Need to know row's index
                               .entries
                               .map((row) => TableRow(
@@ -146,10 +146,10 @@ class _MyAppState extends State<MyApp> {
                   SizedBox(height: 16),
                   Container(
                       child: Table(
-                          children: sequences
+                          children: _sequences
                               .map((row) =>
                                   // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
-                                  row + List.filled(max(0, sequences.map((r) => r.length).fold(0, max) - row.length), ""))
+                                  row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), ""))
                               .map((filledRow) => TableRow(
                                   children: filledRow
                                       .map((elm) => Padding(
@@ -160,7 +160,7 @@ class _MyAppState extends State<MyApp> {
                                               color: elm.isEmpty
                                                   ? Colors.transparent
                                                   // Set cell color depending on whether sequence is completed or not. TODO: Find a layout which removes the need for doing this
-                                                  : SequenceScore(filledRow.where((e) => e != ""), bufferSize).isCompletedBy(_solution, matrix)
+                                                  : SequenceScore(filledRow.where((e) => e != ""), _bufferSize).isCompletedBy(_solution, _matrix)
                                                       ? Colors.green
                                                       : Colors.red,
                                               child: Text(elm, textAlign: TextAlign.center, style: TextStyle(fontSize: 20)))))
@@ -193,10 +193,10 @@ class _MyAppState extends State<MyApp> {
 
   void _computeSolution(String processing) {
     setState(() {});
-    if (_error.length == 0 && bufferSize != null) {
+    if (_error.length == 0 && _bufferSize != null) {
       _processing = processing;
       setState(() {});
-      compute(_calculateSolution, {"bufferSize": bufferSize, "matrix": matrix, "sequences": sequences}).then((solution) {
+      compute(_calculateSolution, {"bufferSize": _bufferSize, "matrix": _matrix, "sequences": _sequences}).then((solution) {
         _solution = solution;
         _processing = null;
         setState(() {});
