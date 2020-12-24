@@ -35,7 +35,7 @@ class _MyAppState extends State<MyApp> {
     ["BD", "E9", "BD", "55"],
     ["55", "1C", "FF", "BD"]
   ];
-  final List<String> _validHex = ["1C", "FF", "E9", "BD", "55"];
+  final List<String> _validHex = ["1C", "FF", "E9", "BD", "55", "7A"];
   String _processing;
   Path _solution = Path([]);
 
