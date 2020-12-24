@@ -20,7 +20,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _error = "";
-  final textRecognizer = FirebaseVision.instance.textRecognizer();
+  final TextRecognizer textRecognizer = FirebaseVision.instance.textRecognizer();
   int bufferSize;
   List<List<String>> matrix = [
     ["1C", "BD", "55", "E9", "55"],
