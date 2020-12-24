@@ -39,36 +39,6 @@ class _MyAppState extends State<MyApp> {
   String _processing;
   Path _solution = Path([]);
 
-  static Path _calculateSolution(map) {
-    List<List<String>> matrix = map["matrix"];
-    List<List<String>> sequences = map["sequences"];
-    int bufferSize = map["bufferSize"];
-    List<Path> allPaths = PathGenerator(matrix, sequences, bufferSize).generate();
-    int maxScore = 0;
-    Path maxPath = Path([]);
-    for (Path path in allPaths) {
-      int newScore = max(maxScore, PathScore(matrix, path, sequences, bufferSize).compute());
-      if (newScore != maxScore) {
-        maxScore = newScore;
-        maxPath = path;
-      }
-    }
-    return maxPath;
-  }
-
-  void computeSolution(String processing) {
-    setState(() {});
-    if (_error.length == 0 && bufferSize != null) {
-      _processing = processing;
-      setState(() {});
-      compute(_calculateSolution, {"bufferSize": bufferSize, "matrix": matrix, "sequences": sequences}).then((solution) {
-        _solution = solution;
-        _processing = null;
-        setState(() {});
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -125,7 +95,7 @@ class _MyAppState extends State<MyApp> {
                               "Remember that a better quality photo improves the chances of parsing it correctly.";
                           _processing = null;
                         }
-                        computeSolution("Calculating optimal path...");
+                        _computeSolution("Calculating optimal path...");
                       },
                     )),
                 SizedBox(height: 40),
@@ -147,8 +117,7 @@ class _MyAppState extends State<MyApp> {
                           if (newBuffer != bufferSize) {
                             String processing = bufferSize == null ? "Calculating optimal path" : "Recalculating optimal path...";
                             bufferSize = newBuffer;
-                            computeSolution(processing);
-                            setState(() {});
+                            _computeSolution(processing);
                           }
                         })),
                 Column(children: [
@@ -189,7 +158,7 @@ class _MyAppState extends State<MyApp> {
                                               // Ignore the previously generated empty cells
                                               color: elm.isEmpty
                                                   ? Colors.transparent
-                                                  // Set cell color depending on whether sequence is completed or not
+                                                  // Set cell color depending on whether sequence is completed or not. TODO: Find a layout which removes the need for doing this
                                                   : SequenceScore(filledRow.where((e) => e != ""), bufferSize).isCompletedBy(_solution, matrix)
                                                       ? Colors.green
                                                       : Colors.amber,
@@ -202,6 +171,36 @@ class _MyAppState extends State<MyApp> {
             ),
           )),
     );
+  }
+
+  static Path _calculateSolution(map) {
+    List<List<String>> matrix = map["matrix"];
+    List<List<String>> sequences = map["sequences"];
+    int bufferSize = map["bufferSize"];
+    List<Path> allPaths = PathGenerator(matrix, sequences, bufferSize).generate();
+    int maxScore = 0;
+    Path maxPath = Path([]);
+    for (Path path in allPaths) {
+      int newScore = max(maxScore, PathScore(matrix, path, sequences, bufferSize).compute());
+      if (newScore != maxScore) {
+        maxScore = newScore;
+        maxPath = path;
+      }
+    }
+    return maxPath;
+  }
+
+  void _computeSolution(String processing) {
+    setState(() {});
+    if (_error.length == 0 && bufferSize != null) {
+      _processing = processing;
+      setState(() {});
+      compute(_calculateSolution, {"bufferSize": bufferSize, "matrix": matrix, "sequences": sequences}).then((solution) {
+        _solution = solution;
+        _processing = null;
+        setState(() {});
+      });
+    }
   }
 
   int _isPartOfSolution(int row, int column) {
@@ -219,9 +218,7 @@ enum OrderType { MATRIX, SEQUENCE }
 class SequenceGroup {
   List<SequenceCapture> group = [];
 
-  SequenceGroup(Iterable<SequenceCapture> group) {
-    group.forEach((capture) => add(capture));
-  }
+  SequenceGroup(Iterable<SequenceCapture> group) { group.forEach((capture) => add(capture)); }
 
   void add(SequenceCapture newCapture) {
     bool foundMatch = false;
@@ -293,10 +290,12 @@ class SequenceCapture {
         return SequenceCapture(newLeft, newRight, bottom, top, sequence + other.sequence);
       }
     } else {
-      throw Exception("Invalid height");
+      throw InvalidSequenceAddition;
     }
   }
 }
+
+class InvalidSequenceAddition implements Exception{}
 
 class SequenceScore {
   List<String> sequence;
@@ -327,7 +326,11 @@ class SequenceScore {
   }
 
   int _maxScore() {
+    // Can be adjusted to maximize either:
+    //  a) highest quality rewards, possibly lesser quantity
     return pow(10, rewardLevel + 1);
+    //  b) highest amount of rewards, possibly lesser quality
+    // this.score = 100 * (this.rewardLevel + 1);
   }
 
   int _minScore() {
@@ -340,11 +343,7 @@ class SequenceScore {
     bufferSize--;
     score++;
     if (_completed()) {
-      // Can be adjusted to maximize either:
-      //  a) highest quality rewards, possibly lesser quantity
       score = _maxScore();
-      //  b) highest amount of rewards, possibly lesser quality
-      // this.score = 100 * (this.rewardLevel + 1);
     }
   }
 
@@ -374,7 +373,7 @@ class Path {
   Path(this.coords);
 
   Path operator +(Path other) {
-    List<List<int>> new_coords = coords + other.coords;
+    List<List<int>> newCoords = coords + other.coords;
     for (List<int> otherCoord in other.coords) {
       for (List<int> coord in coords) {
         if (coord[0] == otherCoord[0] && coord[1] == otherCoord[1]) {
@@ -382,7 +381,7 @@ class Path {
         }
       }
     }
-    return Path(new_coords);
+    return Path(newCoords);
   }
 
   @override
@@ -399,9 +398,7 @@ class PathScore {
   List<List<String>> matrix;
 
   PathScore(this.matrix, this.path, List<List<String>> sequences, this.bufferSize) {
-    sequences.asMap().forEach((rewardLevel, sequence) {
-      sequenceScores.add(SequenceScore(sequence, bufferSize, rewardLevel));
-    });
+    sequences.asMap().forEach((rewardLevel, sequence) => sequenceScores.add(SequenceScore(sequence, bufferSize, rewardLevel)));
   }
 
   int compute() {
@@ -411,11 +408,9 @@ class PathScore {
     path.coords.forEach((coord) {
       int row = coord[0];
       int column = coord[1];
-      sequenceScores.forEach((seqScore) {
-        seqScore.compute(matrix[row][column]);
-      });
-      score = sequenceScores.map((seq) => seq.score).fold(0, (a, b) => a + b);
+      sequenceScores.forEach((seqScore) => seqScore.compute(matrix[row][column]));
     });
+    score = sequenceScores.map((seq) => seq.score).fold(0, (a, b) => a + b);
     return score;
   }
 }
@@ -430,13 +425,9 @@ class PathGenerator {
   List<Path> completedPaths = [];
 
   List<List<int>> _candidateCoords(int turn, List<int> coordinate) {
-    List<List<int>> candidates = [];
-    if (turn % 2 == 0) {
-      matrix.asMap().forEach((column, _) => candidates.add([coordinate[0], column]));
-    } else {
-      matrix.asMap().forEach((row, _) => candidates.add([row, coordinate[1]]));
-    }
-    return candidates;
+    return (turn % 2 == 0
+        ? matrix.asMap().entries.map((column) => [coordinate[0], column.key])
+        : matrix.asMap().entries.map((row) => [row.key, coordinate[1]])).toList();
   }
 
   void _walkPaths(List<Path> partialPathsStack, int turn, List<List<int>> candidates) {
@@ -461,6 +452,9 @@ class PathGenerator {
   }
 
   List<Path> generate() {
+    if (bufferSize == 0) {
+      return [Path([])];
+    }
     if (completedPaths.length == 0) {
       _walkPaths([Path([])], 0, _candidateCoords(0, [0, 0]));
     }
