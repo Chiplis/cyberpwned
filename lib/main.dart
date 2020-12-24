@@ -181,8 +181,8 @@ class _MyAppState extends State<MyApp> {
     int maxScore = 0;
     Path maxPath = Path([]);
     for (Path path in allPaths) {
-      int newScore = max(maxScore, PathScore(matrix, path, sequences, bufferSize).compute());
-      if (newScore != maxScore) {
+      int newScore = PathScore(matrix, path, sequences, bufferSize).compute();
+      if (newScore > maxScore) {
         maxScore = newScore;
         maxPath = path;
       }
