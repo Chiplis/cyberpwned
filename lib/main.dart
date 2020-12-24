@@ -45,7 +45,7 @@ class _MyAppState extends State<MyApp> {
       home: Scaffold(
           appBar: AppBar(
             centerTitle: true,
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.amber,
             title: const Text('Cyberpwned'),
           ),
           body: Container(
@@ -56,6 +56,7 @@ class _MyAppState extends State<MyApp> {
                 SizedBox(
                     height: 40,
                     child: ElevatedButton(
+                      style: ButtonStyle(backgroundColor: MaterialStateProperty.all(Colors.deepPurple)),
                       child: Text('Upload New Breach Screen'),
                       onPressed: () async {
                         try {
@@ -161,7 +162,7 @@ class _MyAppState extends State<MyApp> {
                                                   // Set cell color depending on whether sequence is completed or not. TODO: Find a layout which removes the need for doing this
                                                   : SequenceScore(filledRow.where((e) => e != ""), bufferSize).isCompletedBy(_solution, matrix)
                                                       ? Colors.green
-                                                      : Colors.amber,
+                                                      : Colors.red,
                                               child: Text(elm, textAlign: TextAlign.center, style: TextStyle(fontSize: 20)))))
                                       .toList()))
                               .toList()))
