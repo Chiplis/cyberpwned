@@ -39,6 +39,53 @@ class _MyAppState extends State<MyApp> {
   String _processing;
   Path _solution = Path([]);
 
+ ElevatedButton _ocrButton(String text, String processing, List<List<String>> result, MaterialStateProperty<Color> color, {bool square: false}) {
+   return ElevatedButton(style: ButtonStyle(backgroundColor: color), onPressed: () async {
+     String parseError = "There was a problem parsing the matrix/sequences. Try again, and remember that the clearer the pictures the better the chances of parsing them correctly.";
+
+     try {
+       _error = "";
+       _solution = Path([]);
+       result.clear();
+
+       var file = await ImagePicker.pickImage(source: ImageSource.camera);
+
+       if (file == null) { return; }
+
+       _processing = processing;
+       setState(() {});
+
+       final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(file);
+       final VisionText visionText = await _textRecognizer.processImage(visionImage);
+
+       // Sort blocks from left to right, so matrix rows are processed first
+       List<TextBlock> blocks = List.from(visionText.blocks)..sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left));
+       // Ignore any blocks containing anything other than valid hexadecimal digits
+       SequenceGroup allSequences = SequenceGroup(blocks
+           .where((block) => !block.text.split(" ").any((possibleHex) => !_validHex.contains(possibleHex)))
+           .map((block) => SequenceCapture.fromBlock(block)).toList());
+
+       result.addAll(allSequences.get().map((seqGroup) => seqGroup.sequence));
+
+       if (result.length == 0 || (square && result.any((row) => row.length != result.length))) {
+         result.clear();
+         _error = parseError;
+       }
+       _processing = "";
+       setState(() {});
+     } catch (e) {
+       _error = parseError;
+       _processing = null;
+       setState(() {});
+       return;
+     }
+   }, child: Text(text));
+ }
+
+ ElevatedButton solutionCalculator() {
+   return ElevatedButton(onPressed: () async { _computeSolution("Calculating optimal path..."); }, child: Text("Calculate Path"));
+ }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -53,52 +100,9 @@ class _MyAppState extends State<MyApp> {
             child: ListView(
               children: <Widget>[
                 SizedBox(height: 40),
-                SizedBox(
-                    height: 40,
-                    child: ElevatedButton(
-                      style: ButtonStyle(backgroundColor: MaterialStateProperty.all(Colors.deepPurple)),
-                      child: Text('Upload New Breach Screen'),
-                      onPressed: () async {
-                        try {
-                          _error = "";
-                          _solution = Path([]);
-                          _matrix = [];
-                          _sequences = [];
-
-                          var file = await ImagePicker.pickImage(source: ImageSource.camera);
-
-                          if (file == null) {
-                            return;
-                          }
-
-                          _processing = "Parsing breach screen capture...";
-                          setState(() {});
-
-                          final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(file);
-                          final VisionText visionText = await _textRecognizer.processImage(visionImage);
-
-                          // Sort blocks from left to right, so matrix rows are processed first
-                          List<TextBlock> blocks = List.from(visionText.blocks)..sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left));
-                          // Ignore any blocks containing anything other than valid hexadecimal digits
-                          SequenceGroup allSequences = SequenceGroup(blocks
-                              .where((block) => !block.text.split(" ").any((possibleHex) => !_validHex.contains(possibleHex)))
-                              .map((block) => SequenceCapture.fromBlock(block)));
-
-                          _matrix = List.from(allSequences.get(OrderType.MATRIX).map((seqGroup) => seqGroup.sequence));
-                          _sequences = List.from(allSequences.get(OrderType.SEQUENCE).map((seqGroup) => seqGroup.sequence));
-
-                          if (_sequences.length == 0 || _matrix.length == 0 || _matrix.any((row) => row.length != _matrix.length)) {
-                            throw Exception("Invalid size");
-                          }
-                        } catch (e) {
-                          _error = "There was an error processing the breach screen. " +
-                              "Make sure that both the code matrix and the sequences are clearly visible. " +
-                              "Remember that a better quality photo improves the chances of parsing it correctly.";
-                          _processing = null;
-                        }
-                        _computeSolution("Calculating optimal path...");
-                      },
-                    )),
+                SizedBox(height: 40, child: _ocrButton('Upload Code Matrix', "Parsing code matrix...", _matrix, MaterialStateProperty.all(Colors.deepPurple), square: true)),
+                SizedBox(height: 40),
+                SizedBox(height: 40, child: _ocrButton('Upload Sequences', "Parsing sequences...", _sequences, MaterialStateProperty.all(Colors.deepOrange))),
                 SizedBox(height: 40),
                 SizedBox(
                     height: 65,
@@ -129,42 +133,42 @@ class _MyAppState extends State<MyApp> {
                               .asMap() // Need to know row's index
                               .entries
                               .map((row) => TableRow(
-                                  children: row.value
-                                      .asMap() // Need to know column's index
-                                      .entries
-                                      .map((column) => Padding(
-                                          padding: EdgeInsets.all(2),
-                                          child: AnimatedContainer(
-                                              duration: Duration(milliseconds: 300),
-                                              // Color cell depending on whether the coordinate is part of the optimal path
-                                              color: _isPartOfSolution(row.key, column.key) == null ? Colors.lightBlue : Colors.green,
-                                              // If the coordinate is part of the optimal path, show when it should be visited instead of displaying its value
-                                              child: Text(_isPartOfSolution(row.key, column.key)?.toString() ?? column.value,
-                                                  textAlign: TextAlign.center, style: TextStyle(fontSize: 20)))))
-                                      .toList()))
+                              children: row.value
+                                  .asMap() // Need to know column's index
+                                  .entries
+                                  .map((column) => Padding(
+                                  padding: EdgeInsets.all(2),
+                                  child: AnimatedContainer(
+                                      duration: Duration(milliseconds: 300),
+                                      // Color cell depending on whether the coordinate is part of the optimal path
+                                      color: _isPartOfSolution(row.key, column.key) == null ? Colors.lightBlue : Colors.green,
+                                      // If the coordinate is part of the optimal path, show when it should be visited instead of displaying its value
+                                      child: Text(_isPartOfSolution(row.key, column.key)?.toString() ?? column.value,
+                                          textAlign: TextAlign.center, style: TextStyle(fontSize: 20)))))
+                                  .toList()))
                               .toList())),
                   SizedBox(height: 16),
                   Container(
                       child: Table(
                           children: _sequences
                               .map((row) =>
-                                  // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
-                                  row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), ""))
+                          // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
+                          row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), ""))
                               .map((filledRow) => TableRow(
-                                  children: filledRow
-                                      .map((elm) => Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 2),
-                                          child: AnimatedContainer(
-                                              duration: Duration(milliseconds: 300),
-                                              // Ignore the previously generated empty cells
-                                              color: elm.isEmpty
-                                                  ? Colors.transparent
-                                                  // Set cell color depending on whether sequence is completed or not. TODO: Find a layout which removes the need for doing this
-                                                  : SequenceScore(filledRow.where((e) => e != ""), _bufferSize).isCompletedBy(_solution, _matrix)
-                                                      ? Colors.green
-                                                      : Colors.red,
-                                              child: Text(elm, textAlign: TextAlign.center, style: TextStyle(fontSize: 20)))))
-                                      .toList()))
+                              children: filledRow
+                                  .map((elm) => Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 2),
+                                  child: AnimatedContainer(
+                                      duration: Duration(milliseconds: 300),
+                                      // Ignore the previously generated empty cells
+                                      color: elm.isEmpty
+                                          ? Colors.transparent
+                                      // Set cell color depending on whether sequence is completed or not. TODO: Find a layout which removes the need for doing this
+                                          : SequenceScore(filledRow.where((e) => e != ""), _bufferSize).isCompletedBy(_solution, _matrix)
+                                          ? Colors.green
+                                          : Colors.red,
+                                      child: Text(elm, textAlign: TextAlign.center, style: TextStyle(fontSize: 20)))))
+                                  .toList()))
                               .toList()))
                 ]),
                 Text(_error, style: TextStyle(backgroundColor: Colors.red, color: Colors.white), textAlign: TextAlign.justify),
@@ -196,7 +200,10 @@ class _MyAppState extends State<MyApp> {
     if (_error.length == 0 && _bufferSize != null) {
       _processing = processing;
       setState(() {});
-      compute(_calculateSolution, {"bufferSize": _bufferSize, "matrix": _matrix, "sequences": _sequences}).then((solution) {
+      compute(_calculateSolution, {
+        "bufferSize": _bufferSize,
+        "matrix": _matrix.map((row) => row.where((elm) => elm != "").toList()).toList(),
+        "sequences": _sequences.map((row) => row.where((elm) => elm != "").toList()).toList()}).then((solution) {
         _solution = solution;
         _processing = null;
         setState(() {});
@@ -219,42 +226,43 @@ enum OrderType { MATRIX, SEQUENCE }
 class SequenceGroup {
   List<SequenceCapture> group = [];
 
-  SequenceGroup(Iterable<SequenceCapture> group) { group.forEach((capture) => add(capture)); }
+  SequenceGroup(this.group);
 
-  void add(SequenceCapture newCapture) {
-    bool foundMatch = false;
+  void _order() {
+    double minDiff = double.infinity;
+
+    List<int> matchIndexes = [];
+    List<SequenceCapture> matchCaptures = [];
+
     for (int i = 0; i < group.length; i++) {
-      try {
-        group[i] += newCapture;
-        foundMatch = true;
+      for (int j = 0; j < group.length; j++) {
+        if (i == j) { continue; }
+        SequenceCapture a = group[i];
+        SequenceCapture b = group[j];
+        double newDiff = (a.top - b.top).abs();
+        if (newDiff < minDiff && newDiff < 70) {
+          minDiff = newDiff;
+          matchIndexes = [i, j];
+          matchCaptures = [a, b];
+        }
+      }
+      if (matchIndexes.isNotEmpty) {
         break;
-      } catch (e) {}
+      }
     }
 
-    if (!foundMatch) {
-      group.add(newCapture);
+    if (matchIndexes.isNotEmpty) {
+      group.remove(matchCaptures[0]);
+      group.remove(matchCaptures[1]);
+      group.add(matchCaptures.reduce((value, element) => value + element));
+      _order();
     }
   }
 
-  List<SequenceCapture> get(OrderType order) {
-    List<SequenceCapture> result = [];
-    if (order == OrderType.MATRIX) {
-      group.sort((a, b) => a.left.compareTo(b.left));
-    } else {
-      group.sort((a, b) => -(a.left.compareTo(b.left)));
-    }
-    double lastLeft;
-    for (SequenceCapture capture in group) {
-      if (lastLeft != null && (capture.left - lastLeft).abs() > 50) {
-        // Finished travelling matrix
-        break;
-      }
-      lastLeft = capture.left;
-      result.add(capture);
-    }
-
-    result.sort((a, b) => a.top.compareTo(b.top));
-    return result;
+  List<SequenceCapture> get() {
+    _order();
+    group.sort((a, b) => a.top.compareTo(b.top)); // Sort result from top to bottom
+    return group;
   }
 }
 
@@ -275,24 +283,9 @@ class SequenceCapture {
     sequence = block.text.split(" ");
   }
 
-  double height() {
-    return (top - bottom).abs();
-  }
-
   SequenceCapture operator +(SequenceCapture other) {
-    double heightDiff = max(other.height(), height()) / min(other.height(), height());
-    if ((other.top - top).abs() < 25 && (other.left - right).abs() < 160 && heightDiff < 1.15) {
-      // Sequences are in same row
-      double newRight = max(other.right, right);
-      double newLeft = min(other.left, left);
-      if (other.left < left) {
-        return SequenceCapture(newLeft, newRight, bottom, top, other.sequence + sequence);
-      } else {
-        return SequenceCapture(newLeft, newRight, bottom, top, sequence + other.sequence);
-      }
-    } else {
-      throw InvalidSequenceAddition;
-    }
+    if (this == other || other == null) return this;
+    return SequenceCapture(min(left, other.left), max(right, other.right), max(bottom, other.bottom), min(top, other.top), left < other.left ? sequence + other.sequence : other.sequence + sequence);
   }
 }
 
@@ -323,10 +316,10 @@ class SequenceScore {
 
   bool isCompletedBy(Path path, List<List<String>> matrix) {
     path.coords.forEach((coord) => compute(matrix[coord[0]][coord[1]]));
-    return score == _maxScore();
+    return score == maxScore();
   }
 
-  int _maxScore() {
+  int maxScore() {
     // Can be adjusted to maximize either:
     //  a) highest quality rewards, possibly lesser quantity
     return pow(10, rewardLevel + 1);
@@ -334,7 +327,7 @@ class SequenceScore {
     // this.score = 100 * (this.rewardLevel + 1);
   }
 
-  int _minScore() {
+  int minScore() {
     return -rewardLevel - 1;
   }
 
@@ -344,7 +337,7 @@ class SequenceScore {
     bufferSize--;
     score++;
     if (_completed()) {
-      score = _maxScore();
+      score = maxScore();
     }
   }
 
@@ -356,7 +349,7 @@ class SequenceScore {
       score--;
     }
     if (_completed()) {
-      score = _minScore();
+      score = minScore();
     }
   }
 
@@ -414,6 +407,14 @@ class PathScore {
     score = sequenceScores.map((seq) => seq.score).fold(0, (a, b) => a + b);
     return score;
   }
+
+  int maxScore() {
+    return sequenceScores.map((score) => score.maxScore()).fold(0, (a, b) => a + b);
+  }
+
+  int minScore() {
+    return sequenceScores.map((score) => score.minScore()).fold(0, (a, b) => a + b);
+  }
 }
 
 class PathGenerator {
@@ -443,9 +444,15 @@ class PathGenerator {
 
       if (newPath.coords.length == bufferSize) {
         completedPaths.add(newPath);
-      } else if (PathScore(matrix, newPath, sequences, bufferSize).compute() < 0) {
-        continue;
       } else {
+        PathScore pathScore = PathScore(matrix, newPath, sequences, bufferSize);
+        int score = pathScore.compute();
+        if (score == pathScore.maxScore()) {
+          completedPaths.add(newPath);
+          continue;
+        } else if (score == pathScore.minScore()) {
+          continue;
+        }
         partialPathsStack.add(newPath);
         _walkPaths(partialPathsStack, turn + 1, _candidateCoords(turn + 1, coord));
       }
