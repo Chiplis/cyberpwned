@@ -26,7 +26,7 @@ class MyApp extends StatefulWidget {
 }
 
 enum CellType {
-  MATIRX, SEQUENCE
+  MATRIX, SEQUENCE
 }
 
 class DisplayCell {
@@ -41,7 +41,7 @@ class DisplayCell {
 
 
   DisplayCell.forMatrix(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = false}) {
-    this._cellType = CellType.MATIRX;
+    this._cellType = CellType.MATRIX;
   }
 
 
@@ -70,7 +70,7 @@ class DisplayCell {
         }
       }
       return notFound;
-    } else if (_cellType == CellType.MATIRX) {
+    } else if (_cellType == CellType.MATRIX) {
       return (_isPartOfSolution() != null) ? found : notFound;
     }
     return null;
@@ -79,7 +79,7 @@ class DisplayCell {
   Widget render() {
     if (matrix.isEmpty || sequences.isEmpty) return Text("");
     return Text(
-        showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : matrix[x][y],
+        showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : (_cellType == CellType.MATRIX ? matrix[x][y] : sequences[0][y]),
       style: TextStyle(color: _colorForCell(Colors.lightGreenAccent, Colors.redAccent), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
     );
   }
