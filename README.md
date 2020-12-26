@@ -1,4 +1,4 @@
-# cyberpwned
+# Cyberpwned
 
 Cyberpunk 2077 Hacking Minigame Resolver
 
