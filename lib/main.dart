@@ -1,16 +1,23 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 import 'package:firebase_ml_vision/firebase_ml_vision.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 
 Future<void> main() async {
   runApp(MaterialApp(
-    home: MyApp(),
-    debugShowCheckedModeBanner: false,
-  ));
+      theme: ThemeData(
+          primarySwatch: Colors.amber,
+          fontFamily: GoogleFonts.rajdhani().fontFamily,
+          textTheme: GoogleFonts.solwayTextTheme()),
+      home: MyApp(),
+      debugShowCheckedModeBanner: false)
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -18,8 +25,68 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
+enum CellType {
+  MATIRX, SEQUENCE
+}
+
+class DisplayCell {
+  int x;
+  int y;
+  int bufferSize;
+  Path solution;
+  bool showIndex = false;
+  List<List<String>> sequences;
+  List<List<String>> matrix;
+  CellType _cellType;
+
+
+  DisplayCell.forMatrix(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = false}) {
+    this._cellType = CellType.MATIRX;
+  }
+
+
+  DisplayCell.forSequence(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = false}) {
+    this._cellType = CellType.SEQUENCE;
+  }
+
+  int _isPartOfSolution() {
+    if (bufferSize != solution.coords.length) return null;
+    for (int i = 0; i < solution.coords.length; i++) {
+      if (solution.coords[i][0] == x && solution.coords[i][1] == y) {
+        return i + 1;
+      }
+    }
+    return null;
+  }
+
+  Color _colorForCell(Color found, Color notFound) {
+    if (solution.coords.isEmpty) return Colors.lightBlueAccent;
+    if (bufferSize != solution.coords.length) return Colors.lightBlueAccent;
+
+    if (_cellType == CellType.SEQUENCE) {
+      for (List<String> sequence in sequences) {
+        if (SequenceScore(sequence.where((element) => element.isNotEmpty), bufferSize).isCompletedBy(solution, matrix)) {
+          return found;
+        }
+      }
+      return notFound;
+    } else if (_cellType == CellType.MATIRX) {
+      return (_isPartOfSolution() != null) ? found : notFound;
+    }
+    return null;
+  }
+
+  Widget render() {
+    if (matrix.isEmpty || sequences.isEmpty) return Text("");
+    return Text(
+        showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : matrix[x][y],
+      style: TextStyle(color: _colorForCell(Colors.lightGreenAccent, Colors.redAccent), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
+    );
+  }
+}
+
 class _MyAppState extends State<MyApp> {
-  String _error = "";
+  Map<String, String> _error = {"MISSING BUFFER SIZE": "Specify a buffer size before calculating an optimal path."};
   final TextRecognizer _textRecognizer = FirebaseVision.instance.textRecognizer();
   int _bufferSize;
   List<List<String>> _matrix = [
@@ -39,23 +106,26 @@ class _MyAppState extends State<MyApp> {
   Map<String, String> _processing = {};
   Path _solution = Path([]);
 
-  ElevatedButton _ocrButton(String text, String processingMsg, String processingKey, List<List<String>> result, MaterialStateProperty<Color> color, {bool square: false}) {
-    return ElevatedButton(
-        style: ButtonStyle(backgroundColor: color),
+
+  OutlinedButton _parseButton(String text, String processingMsg, String entity, List<List<String>> result, {bool square: false}) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+          shape: BeveledRectangleBorder(),
+          onSurface: Colors.white,
+          side: BorderSide(color: _processing[entity] == null ? Color(int.parse("0xffdaf759")) : Colors.blueAccent),
+          backgroundColor: Colors.transparent,
+        ),
         onPressed: () async {
-          String parseError = "There was a problem parsing the matrix/sequences. Try again, and remember that the clearer the pictures the better the chances of parsing them correctly.";
           try {
-            _error = "";
-            _solution = Path([]);
-            result.clear();
-
             var file = await ImagePicker().getImage(source: ImageSource.camera);
-
             if (file == null) {
               return;
             }
 
-            _processing[processingKey] = processingMsg;
+            _processing[entity] = processingMsg;
+            _error["${entity.toUpperCase()} PARSE ERROR"] = "";
+            _solution = Path([]);
+            result.clear();
 
             setState(() {});
 
@@ -75,16 +145,16 @@ class _MyAppState extends State<MyApp> {
               throw Exception("Invalid size.");
             }
           } catch (e) {
-            _error = parseError;
+            _error["${entity.toUpperCase()} PARSE ERROR"] = _parseError(entity);
           }
-          _processing[processingKey] = null;
+          _processing[entity] = null;
           setState(() {});
         },
-        child: Text(_processing[processingMsg] ?? text));
+        child: Text(_processing[entity] ?? text, style: TextStyle(color: _processing[entity] == null ? Color(int.parse("0xffdaf759")) : Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily)));
   }
 
   bool _calculationEnabled() {
-    return _bufferSize != null && _matrix.isNotEmpty && _sequences.isNotEmpty;
+    return _allErrors().isEmpty && _bufferSize != null && _matrix.isNotEmpty && _sequences.isNotEmpty;
   }
 
   @override
@@ -93,104 +163,154 @@ class _MyAppState extends State<MyApp> {
       home: Scaffold(
           appBar: AppBar(
             centerTitle: true,
-            backgroundColor: Colors.amber,
-            title: const Text('Cyberpwned'),
+            backgroundColor: Colors.black,
+            title: Text('CYBERPWNED',
+                style: TextStyle(
+                    color: Color(int.parse("0xffdaf759")),
+                    fontFamily: GoogleFonts.rajdhani().fontFamily,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 25
+                )
+            ),
           ),
           body: Container(
             color: Colors.black,
             child: ListView(
               children: <Widget>[
-                SizedBox(height: 40),
-                SizedBox(
-                    height: 65,
-                    child: TextField(
-                        style: TextStyle(color: Colors.white),
-                        decoration: new InputDecoration(
-                            fillColor: Colors.white,
-                            focusColor: Colors.white,
-                            hoverColor: Colors.white,
-                            labelText: "Input your buffer size",
-                            labelStyle: TextStyle(color: Colors.white)),
-                        keyboardType: TextInputType.number,
-                        cursorColor: Colors.white,
-                        inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                        onSubmitted: (buffer) async {
-                          int newBuffer = int.parse(buffer, radix: 10);
-                          if (newBuffer != _bufferSize) {
-                            _bufferSize = newBuffer;
-                            setState(() {});
-                          }
-                        })),
-                SizedBox(
-                    height: 40,
-                    child: _ocrButton('Upload Code Matrix', "Parsing code matrix...", "matrix", _matrix, MaterialStateProperty.all(Colors.deepPurple),
+                SizedBox(height: 30),
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    child: Padding(padding: EdgeInsets.all(15), child: TextField(
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Color(int.parse("0xffdaf759")),
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: GoogleFonts.rajdhani().fontFamily
+                            ),
+                            decoration: new InputDecoration(
+                                alignLabelWithHint: true,
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: Color(int.parse("0xffdaf759")), width: 3),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.lightBlueAccent, width: 3),
+                                ),
+                                labelText: "BUFFER SIZE",
+                                labelStyle: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(int.parse("0xffdaf759")),
+                                    fontFamily: GoogleFonts.rajdhani().fontFamily,
+                                )
+                            ),
+                            keyboardType: TextInputType.number,
+                            cursorColor: Colors.white,
+                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                            onSubmitted: (buffer) async {
+                              int newBuffer = int.tryParse(buffer, radix: 10);
+                              _error["MISSING BUFFER SIZE"] = newBuffer != null ? "" : "Specify a buffer size before calculating an optimal path.";
+
+                              if (newBuffer != null) {
+                                if (_bufferSize == null) {
+                                  _bufferSize = newBuffer;
+                                  setState(() {});
+                                } else {
+                                  _bufferSize = newBuffer;
+                                }
+                              } else {
+                                _bufferSize = newBuffer;
+                                setState(() {});
+                              }
+                            })
+                    )),
+                SizedBox(height: 10),
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    child: _parseButton('UPLOAD CODE MATRIX', "PARSING CODE MATRIX...", "matrix", _matrix,
                         square: true)),
-                SizedBox(height: 40),
-                SizedBox(
-                    height: 40,
-                    child: _ocrButton('Upload Sequences', "Parsing sequences...", "sequences", _sequences, MaterialStateProperty.all(Colors.deepOrange))),
-                SizedBox(height: 40),
-                SizedBox(
-                    height: 40,
-                    child: ElevatedButton(
-                        style: ButtonStyle(backgroundColor: MaterialStateProperty.all(_calculationEnabled() ? Colors.green : Colors.grey)),
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Table(
+                        children: _matrix
+                            .asMap() // Need to know row's index
+                            .entries
+                            .map((row) =>
+                            TableRow(
+                                children: row.value
+                                    .asMap() // Need to know column's index
+                                    .entries
+                                    .map((column) =>
+                                    Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: AnimatedContainer(
+                                            duration: Duration(milliseconds: 1000),
+                                            // Color cell depending on whether the coordinate is part of the optimal path
+                                            // If the coordinate is part of the optimal path, show when it should be visited instead of displaying its value
+                                            child: DisplayCell.forMatrix(row.key, column.key, _bufferSize, _sequences, _solution, _matrix, showIndex: true).render())))
+                                    .toList()))
+                            .toList())),
+                SizedBox(height: 10),
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    child: _parseButton('UPLOAD SEQUENCES', "PARSING SEQUENCES...", "sequences", _sequences)),
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 50),
+                    child: Table(
+                        children: _sequences
+                            .map((row) =>
+                        // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
+                        row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), "")).toList().asMap().entries.map((sequence) =>
+                            TableRow(children: sequence.value.asMap().entries.map((elm) =>
+                                Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 2),
+                                    child: AnimatedContainer(
+                                        duration: Duration(milliseconds: 300),
+                                        // Ignore the previously generated empty cells
+                                        child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, [sequence.value], _solution, _matrix).render())))
+                                .toList()))
+                            .toList())),
+                SizedBox(height: 10),
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          shape: BeveledRectangleBorder(),
+                          onSurface: Colors.white,
+                          side: BorderSide(color: _processing["path"] != null ? Colors.lightBlueAccent : _error.keys.where((key) => _error[key] != "").toList().isEmpty ? Color(int.parse("0xffdaf759")) : Colors.redAccent),
+                          backgroundColor: Colors.transparent,
+                        ),
                         onPressed: () async {
+                          setState(() {});
                           if (_calculationEnabled()) {
-                            _computeSolution("Calculating optimal path...", "path");
+                            _computeSolution("CALCULATING OPTIMAL PATH...", "path");
                           }
                         },
-                        child: Text(_processing["path"]  ?? "Calculate Path"))),
-                SizedBox(height: 40),
-                Column(children: [
-                  Container(
-                      child: Table(
-                          children: _matrix
-                              .asMap() // Need to know row's index
-                              .entries
-                              .map((row) => TableRow(
-                                  children: row.value
-                                      .asMap() // Need to know column's index
-                                      .entries
-                                      .map((column) => Padding(
-                                          padding: EdgeInsets.all(2),
-                                          child: AnimatedContainer(
-                                              duration: Duration(milliseconds: 300),
-                                              // Color cell depending on whether the coordinate is part of the optimal path
-                                              color: _isPartOfSolution(row.key, column.key) == null ? Colors.lightBlue : Colors.green,
-                                              // If the coordinate is part of the optimal path, show when it should be visited instead of displaying its value
-                                              child: Text(_isPartOfSolution(row.key, column.key)?.toString() ?? column.value,
-                                                  textAlign: TextAlign.center, style: TextStyle(fontSize: 20)))))
-                                      .toList()))
-                              .toList())),
-                  SizedBox(height: 16),
-                  Container(
-                      child: Table(
-                          children: _sequences
-                              .map((row) =>
-                                  // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
-                                  row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), ""))
-                              .map((filledRow) => TableRow(
-                                  children: filledRow
-                                      .map((elm) => Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 2),
-                                          child: AnimatedContainer(
-                                              duration: Duration(milliseconds: 300),
-                                              // Ignore the previously generated empty cells
-                                              color: elm.isEmpty
-                                                  ? Colors.transparent
-                                                  // Set cell color depending on whether sequence is completed or not. TODO: Find a layout which removes the need for doing this
-                                                  : SequenceScore(filledRow.where((e) => e != ""), _bufferSize).isCompletedBy(_solution, _matrix)
-                                                      ? Colors.green
-                                                      : Colors.red,
-                                              child: Text(elm, textAlign: TextAlign.center, style: TextStyle(fontSize: 20)))))
-                                      .toList()))
-                              .toList()))
-                ]),
-                Text(_error, style: TextStyle(backgroundColor: Colors.red, color: Colors.white), textAlign: TextAlign.justify),
+                        child: Text(_processing["path"] ?? (_error.keys.where((key) => _error[key] != "").toList() + ["CALCULATE PATH"])[0], style: TextStyle(
+                            fontFamily: GoogleFonts.rajdhani().fontFamily,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _processing["path"] != null ? Colors.lightBlueAccent : (_calculationEnabled() ? Color(int.parse("0xffdaf759")) : Colors.redAccent))))),
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    child: Text(_allErrors(), style: TextStyle(backgroundColor: Colors.red, fontSize: 15, fontFamily: GoogleFonts
+                    .rajdhani()
+                    .fontFamily), textAlign: TextAlign.justify)),
               ],
             ),
           )),
     );
+  }
+
+  String _allErrors() {
+    String result = "";
+    for (String key in _error.keys) {
+      if (_error[key] != "") {
+        result += "\n" + _error[key];
+      }
+    }
+    return result.trim();
   }
 
   static Path _calculateSolution(map) {
@@ -212,30 +332,23 @@ class _MyAppState extends State<MyApp> {
 
   void _computeSolution(String processingMsg, String processingKey) {
     setState(() {});
-    if (_error.length == 0 && _bufferSize != null) {
-      _processing[processingKey] = processingMsg;
+    _processing[processingKey] = processingMsg;
+    setState(() {});
+    compute(_calculateSolution, {
+      "bufferSize": _bufferSize,
+      "matrix": _matrix.map((row) => row.where((elm) => elm != "").toList()).toList(),
+      "sequences": _sequences.map((row) => row.where((elm) => elm != "").toList()).toList()
+    }).then((solution) {
+      _solution = solution;
+      _processing[processingKey] = null;
       setState(() {});
-      compute(_calculateSolution, {
-        "bufferSize": _bufferSize,
-        "matrix": _matrix.map((row) => row.where((elm) => elm != "").toList()).toList(),
-        "sequences": _sequences.map((row) => row.where((elm) => elm != "").toList()).toList()
-      }).then((solution) {
-        _solution = solution;
-        _processing[processingKey] = null;
-        setState(() {});
-      }, onError: (error) {
-        _error = error.toString();
-      });
-    }
+    }, onError: (error) {
+      _error["CALCULATION ERROR"] = error.toString();
+    });
   }
 
-  int _isPartOfSolution(int row, int column) {
-    for (int i = 0; i < _solution.coords.length; i++) {
-      if (_solution.coords[i][0] == row && _solution.coords[i][1] == column) {
-        return i + 1;
-      }
-    }
-    return null;
+  String _parseError(String s) {
+    return "There was a problem parsing the $s.";
   }
 }
 
@@ -336,6 +449,7 @@ class SequenceScore {
   }
 
   bool isCompletedBy(Path path, List<List<String>> matrix) {
+    if (path.coords.isEmpty) return null;
     path.coords.forEach((coord) => compute(matrix[coord[0]][coord[1]]));
     return score == maxScore();
   }
@@ -376,7 +490,7 @@ class SequenceScore {
 
   // A sequence is considered completed if no further progress is possible or necessary
   bool _completed() {
-    return score < 0 || score >= maxProgress || bufferSize < maxProgress - score;
+    return score < 0 || score >= maxProgress || bufferSize == null || bufferSize < maxProgress - score;
   }
 }
 

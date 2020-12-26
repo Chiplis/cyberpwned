@@ -4,4 +4,7 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Tentative fix for Pixel 2 XL permission problems -->
+    <uses-permission android:name="android.permission.CAMERA" />
 </manifest>
