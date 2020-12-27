@@ -292,7 +292,7 @@ class _MyAppState extends State<MyApp> {
                         style: OutlinedButton.styleFrom(
                           shape: BeveledRectangleBorder(),
                           onSurface: Colors.white,
-                          side: BorderSide(color: _processing["path"] != null ? Colors.lightBlueAccent : _error.keys.where((key) => _error[key] != "").toList().isEmpty ? getNeutral() : getFailure()),
+                          side: BorderSide(color: _processing["path"] != null ? getInteractable() : _error.keys.where((key) => _error[key] != "").toList().isEmpty ? getSuccess() : getFailure()),
                           backgroundColor: Colors.transparent,
                         ),
                         onPressed: () async {
@@ -305,7 +305,7 @@ class _MyAppState extends State<MyApp> {
                             fontFamily: GoogleFonts.rajdhani().fontFamily,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: _processing["path"] != null ? _MyAppState.getInteractable() : (_calculationEnabled() ? getNeutral() : getFailure()))))),
+                            color: _processing["path"] != null ? getInteractable() : (_calculationEnabled() ? getSuccess() : getFailure()))))),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
                     child: Text(_allErrors(), style: TextStyle(backgroundColor: Colors.red, fontSize: 15, fontFamily: GoogleFonts
