@@ -60,18 +60,17 @@ class DisplayCell {
   }
 
   Color _colorForCell(Color found, Color notFound) {
-    if (solution.coords.isEmpty) return Colors.lightBlueAccent;
-    if (bufferSize != solution.coords.length) return Colors.lightBlueAccent;
+    if (bufferSize != solution.coords.length || solution.coords.isEmpty) return _MyAppState.getNeutral();
 
     if (_cellType == CellType.SEQUENCE) {
       for (List<String> sequence in sequences) {
         if (SequenceScore(sequence.where((element) => element.isNotEmpty), bufferSize).isCompletedBy(solution, matrix)) {
-          return found;
+          return _MyAppState.getSuccess();
         }
       }
-      return notFound;
+      return _MyAppState.getFailure();
     } else if (_cellType == CellType.MATRIX) {
-      return (_isPartOfSolution() != null) ? found : notFound;
+      return (_isPartOfSolution() != null) ? _MyAppState.getSuccess() : _MyAppState.getFailure();
     }
     return null;
   }
@@ -80,7 +79,7 @@ class DisplayCell {
     if (matrix.isEmpty || sequences.isEmpty) return Text("");
     return Text(
         showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : (_cellType == CellType.MATRIX ? matrix[x][y] : sequences[0][y]),
-      style: TextStyle(color: _colorForCell(Colors.lightGreenAccent, Colors.redAccent), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
+      style: TextStyle(color: _colorForCell(_MyAppState.getSuccess(), _MyAppState.getFailure()), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
     );
   }
 }
@@ -106,13 +105,28 @@ class _MyAppState extends State<MyApp> {
   Map<String, String> _processing = {};
   Path _solution = Path([]);
 
+  static Color getInteractable() {
+    return Colors.lightBlue;
+  }
+
+  static Color getNeutral() {
+    return Color(int.parse("0xffdaf759"));
+  }
+
+  static Color getSuccess() {
+    return Colors.green;
+  }
+
+  static Color getFailure() {
+    return Colors.redAccent;
+  }
 
   OutlinedButton _parseButton(String text, String processingMsg, String entity, List<List<String>> result, {bool square: false}) {
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
           shape: BeveledRectangleBorder(),
           onSurface: Colors.white,
-          side: BorderSide(color: _processing[entity] == null ? Color(int.parse("0xffdaf759")) : Colors.blueAccent),
+          side: BorderSide(color: result.isEmpty ? getInteractable() : getNeutral()),
           backgroundColor: Colors.transparent,
         ),
         onPressed: () async {
@@ -150,7 +164,7 @@ class _MyAppState extends State<MyApp> {
           _processing[entity] = null;
           setState(() {});
         },
-        child: Text(_processing[entity] ?? text, style: TextStyle(color: _processing[entity] == null ? Color(int.parse("0xffdaf759")) : Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily)));
+        child: Text(_processing[entity] ?? text, style: TextStyle(color: result.isEmpty ? getInteractable() : getNeutral(), fontWeight: FontWeight.bold, fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily)));
   }
 
   bool _calculationEnabled() {
@@ -166,7 +180,7 @@ class _MyAppState extends State<MyApp> {
             backgroundColor: Colors.black,
             title: Text('CYBERPWNED',
                 style: TextStyle(
-                    color: Color(int.parse("0xffdaf759")),
+                    color: getNeutral(),
                     fontFamily: GoogleFonts.rajdhani().fontFamily,
                     fontWeight: FontWeight.bold,
                     fontSize: 25
@@ -184,7 +198,7 @@ class _MyAppState extends State<MyApp> {
                             maxLines: 1,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                color: Color(int.parse("0xffdaf759")),
+                                color: getNeutral(),
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 fontFamily: GoogleFonts.rajdhani().fontFamily
@@ -192,16 +206,16 @@ class _MyAppState extends State<MyApp> {
                             decoration: new InputDecoration(
                                 alignLabelWithHint: true,
                                 enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Color(int.parse("0xffdaf759")), width: 3),
+                                  borderSide: BorderSide(color: _bufferSize == null ? getInteractable() : getNeutral(), width: 3),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.lightBlueAccent, width: 3),
+                                  borderSide: BorderSide(color: _bufferSize == null ? getInteractable() : getNeutral(), width: 3),
                                 ),
                                 labelText: "BUFFER SIZE",
                                 labelStyle: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(int.parse("0xffdaf759")),
+                                    color: _bufferSize == null ? getInteractable() : getNeutral(),
                                     fontFamily: GoogleFonts.rajdhani().fontFamily,
                                 )
                             ),
@@ -278,7 +292,7 @@ class _MyAppState extends State<MyApp> {
                         style: OutlinedButton.styleFrom(
                           shape: BeveledRectangleBorder(),
                           onSurface: Colors.white,
-                          side: BorderSide(color: _processing["path"] != null ? Colors.lightBlueAccent : _error.keys.where((key) => _error[key] != "").toList().isEmpty ? Color(int.parse("0xffdaf759")) : Colors.redAccent),
+                          side: BorderSide(color: _processing["path"] != null ? Colors.lightBlueAccent : _error.keys.where((key) => _error[key] != "").toList().isEmpty ? getNeutral() : getFailure()),
                           backgroundColor: Colors.transparent,
                         ),
                         onPressed: () async {
@@ -287,11 +301,11 @@ class _MyAppState extends State<MyApp> {
                             _computeSolution("CALCULATING OPTIMAL PATH...", "path");
                           }
                         },
-                        child: Text(_processing["path"] ?? (_error.keys.where((key) => _error[key] != "").toList() + ["CALCULATE PATH"])[0], style: TextStyle(
+                        child: Text(_processing["path"] ?? (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0], style: TextStyle(
                             fontFamily: GoogleFonts.rajdhani().fontFamily,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: _processing["path"] != null ? Colors.lightBlueAccent : (_calculationEnabled() ? Color(int.parse("0xffdaf759")) : Colors.redAccent))))),
+                            color: _processing["path"] != null ? _MyAppState.getInteractable() : (_calculationEnabled() ? getNeutral() : getFailure()))))),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
                     child: Text(_allErrors(), style: TextStyle(backgroundColor: Colors.red, fontSize: 15, fontFamily: GoogleFonts
