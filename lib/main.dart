@@ -448,26 +448,45 @@ class SequenceScore {
   int score = 0;
   int maxProgress;
 
-  SequenceScore(Iterable<String> sequence, this.bufferSize, [this.rewardLevel = 0]) {
+  SequenceScore(Iterable<String> sequence, this.bufferSize, {int score: 0, int rewardLevel: 0}) {
     this.sequence = sequence.toList();
+    this.rewardLevel = rewardLevel;
+    this.score = score;
     maxProgress = this.sequence.length;
   }
 
-  void compute(String compare) {
-    if (_completed()) {
-      return;
+  int compute(String compare) {
+    if (_completed() || compare == null) {
+      if (score == maxProgress) {
+        return maxScore();
+      } else if (bufferSize + 1 < maxProgress - score) {
+        return minScore();
+      } else {
+        return score;
+      }
     }
     if (sequence[score] == compare) {
-      _increase();
+      score += _increase();
     } else {
-      _decrease();
+      score += _decrease();
     }
+    if (_completed()) {
+      if (score == maxProgress) {
+        return maxScore();
+      } else if (bufferSize + 1 < maxProgress - score) {
+        return minScore();
+      } else {
+        return score;
+      }
+    }
+    bufferSize--;
+    return score;
   }
 
   bool isCompletedBy(Path path, List<List<String>> matrix) {
     if (path.coords.isEmpty) return null;
     path.coords.forEach((coord) => compute(matrix[coord[0]][coord[1]]));
-    return score == maxScore();
+    return compute(null) == maxScore();
   }
 
   int maxScore() {
@@ -479,41 +498,31 @@ class SequenceScore {
   }
 
   int minScore() {
-    return -rewardLevel - 1;
+    return -(pow(10, rewardLevel+ 1));
   }
 
   // When the head of the sequence matches the targeted node, increase the score by 1
   // If the sequence has been completed, set the score depending on the reward level
-  void _increase() {
-    bufferSize--;
-    score++;
-    if (_completed()) {
-      score = maxScore();
-    }
+  int _increase() {
+    return _completed() ? 0 : 1;
   }
 
   // When an incorrect value is matched against the current head of the sequence, the score is decreased by 1 (can't go below 0)
   // If it's not possible to complete the sequence, set the score to a negative value depending on the reward
-  void _decrease() {
-    this.bufferSize--;
-    if (score > 0) {
-      score--;
-    }
-    if (_completed()) {
-      score = minScore();
-    }
+  int _decrease() {
+    return _completed() ? 0 : score > 0 ? -1 : 0;
   }
 
   // A sequence is considered completed if no further progress is possible or necessary
   bool _completed() {
-    return score < 0 || score >= maxProgress || bufferSize == null || bufferSize < maxProgress - score;
+    return score == maxProgress || bufferSize == null || bufferSize < maxProgress - score;
   }
 }
 
 class DuplicateCoordinateException implements Exception {}
 
 class Path {
-  List<List<int>> coords;
+  final List<List<int>> coords;
 
   Path(this.coords);
 
@@ -533,6 +542,15 @@ class Path {
   String toString() {
     return coords.toString();
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (!(other is Path)) return false;
+    return (other as Path).coords.every((element) => coords.any((coord) => element[0] == coord[0] && element[1] == coord[1]));
+    // TODO: implement ==
+    return super == other;
+  }
 }
 
 class PathScore {
@@ -541,9 +559,10 @@ class PathScore {
   int bufferSize;
   List<SequenceScore> sequenceScores = List<SequenceScore>();
   List<List<String>> matrix;
+  static Map<Path, PathScore> previousScores = {};
 
   PathScore(this.matrix, this.path, List<List<String>> sequences, this.bufferSize) {
-    sequences.asMap().forEach((rewardLevel, sequence) => sequenceScores.add(SequenceScore(sequence, bufferSize, rewardLevel)));
+    sequences.asMap().forEach((rewardLevel, sequence) => sequenceScores.add(SequenceScore(sequence, bufferSize, rewardLevel: rewardLevel)));
   }
 
   int compute() {
@@ -555,7 +574,7 @@ class PathScore {
       int column = coord[1];
       sequenceScores.forEach((seqScore) => seqScore.compute(matrix[row][column]));
     });
-    score = sequenceScores.map((seq) => seq.score).fold(0, (a, b) => a + b);
+    score = sequenceScores.map((seq) => seq.compute(null)).fold(0, (a, b) => a + b);
     return score;
   }
 
@@ -578,33 +597,35 @@ class PathGenerator {
   List<Path> completedPaths = [];
 
   List<List<int>> _candidateCoords(int turn, List<int> coordinate) {
-    return (turn % 2 == 0
+    List<List<int>> coords = (turn % 2 == 0
             ? matrix.asMap().entries.map((column) => [coordinate[0], column.key])
             : matrix.asMap().entries.map((row) => [row.key, coordinate[1]]))
         .toList();
+    return coords;
   }
 
   void _walkPaths(List<Path> partialPathsStack, int turn, List<List<int>> candidates) {
     Path path = partialPathsStack.removeAt(partialPathsStack.length - 1);
+
+    candidates = candidates.where((candidate) => !path.coords.any((coord) => coord[0] == candidate[0] && coord[1] == candidate[1])).toList();
+    candidates.sort((a, b) => -(PathScore(matrix, path + Path([a]), sequences, bufferSize).compute().compareTo(PathScore(matrix, path + Path([b]), sequences, bufferSize).compute())));
     for (List<int> coord in candidates) {
       Path newPath;
-      try {
-        newPath = path + Path([coord]);
-      } on DuplicateCoordinateException {
+      newPath = path + Path([coord]);
+
+      PathScore score = PathScore(matrix, newPath, sequences, bufferSize);
+      if (score.compute() == score.maxScore()) {
+        completedPaths = [newPath];
+        throw PathCompletedException();
+      }
+
+      if (score.compute() < 0) {
         continue;
       }
 
       if (newPath.coords.length == bufferSize) {
         completedPaths.add(newPath);
       } else {
-        PathScore pathScore = PathScore(matrix, newPath, sequences, bufferSize);
-        int score = pathScore.compute();
-        if (score == pathScore.maxScore()) {
-          completedPaths.add(newPath);
-          return;
-        } else if (score == pathScore.minScore()) {
-          continue;
-        }
         partialPathsStack.add(newPath);
         _walkPaths(partialPathsStack, turn + 1, _candidateCoords(turn + 1, coord));
       }
@@ -612,12 +633,19 @@ class PathGenerator {
   }
 
   List<Path> generate() {
+    completedPaths.clear();
     if (bufferSize == 0) {
       return [Path([])];
     }
     if (completedPaths.length == 0) {
-      _walkPaths([Path([])], 0, _candidateCoords(0, [0, 0]));
+      try {
+        _walkPaths([Path([])], 0, _candidateCoords(0, [0, 0]));
+      } on PathCompletedException {
+        return completedPaths;
+      }
     }
     return completedPaths;
   }
 }
+
+class PathCompletedException implements Exception{}
