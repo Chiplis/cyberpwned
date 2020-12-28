@@ -597,9 +597,7 @@ class PathGenerator {
 
   void _walkPaths(List<Path> partialPathsStack, int turn, List<List<int>> candidates) {
     Path path = partialPathsStack.removeAt(partialPathsStack.length - 1);
-
     candidates = candidates.where((candidate) => !path.coords.any((coord) => coord[0] == candidate[0] && coord[1] == candidate[1])).toList();
-    candidates.sort((a, b) => -(PathScore(matrix, path + Path([a]), sequences, bufferSize).compute().compareTo(PathScore(matrix, path + Path([b]), sequences, bufferSize).compute())));
     for (List<int> coord in candidates) {
       Path newPath;
       newPath = path + Path([coord]);
