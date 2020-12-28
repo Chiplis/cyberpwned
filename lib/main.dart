@@ -8,16 +8,11 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
 Future<void> main() async {
   runApp(MaterialApp(
-      theme: ThemeData(
-          primarySwatch: Colors.amber,
-          fontFamily: GoogleFonts.rajdhani().fontFamily,
-          textTheme: GoogleFonts.solwayTextTheme()),
+      theme: ThemeData(primarySwatch: Colors.amber, fontFamily: GoogleFonts.rajdhani().fontFamily, textTheme: GoogleFonts.solwayTextTheme()),
       home: MyApp(),
-      debugShowCheckedModeBanner: false)
-  );
+      debugShowCheckedModeBanner: false));
 }
 
 class MyApp extends StatefulWidget {
@@ -25,9 +20,7 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
-enum CellType {
-  MATRIX, SEQUENCE
-}
+enum CellType { MATRIX, SEQUENCE }
 
 class DisplayCell {
   int x;
@@ -39,11 +32,9 @@ class DisplayCell {
   List<List<String>> matrix;
   CellType _cellType;
 
-
   DisplayCell.forMatrix(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = false}) {
     this._cellType = CellType.MATRIX;
   }
-
 
   DisplayCell.forSequence(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = false}) {
     this._cellType = CellType.SEQUENCE;
@@ -78,14 +69,18 @@ class DisplayCell {
   Widget render() {
     if (matrix.isEmpty || sequences.isEmpty) return Text("");
     return Text(
-        showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : (_cellType == CellType.MATRIX ? matrix[x][y] : sequences[0][y]),
-      style: TextStyle(color: _colorForCell(_MyAppState.getSuccess(), _MyAppState.getFailure()), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
+      showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : (_cellType == CellType.MATRIX ? matrix[x][y] : sequences[0][y]),
+      style: TextStyle(
+          color: _colorForCell(_MyAppState.getSuccess(), _MyAppState.getFailure()),
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          fontFamily: GoogleFonts.rajdhani().fontFamily),
     );
   }
 }
 
 class _MyAppState extends State<MyApp> {
-  Map<String, String> _error = {"MISSING BUFFER SIZE": "Specify a buffer size before calculating an optimal path."};
+  Map<String, String> _error = {"MISSING BUFFER SIZE": "Specify buffer size before calculating path."};
   final TextRecognizer _textRecognizer = FirebaseVision.instance.textRecognizer();
   int _bufferSize;
   List<List<String>> _matrix = [
@@ -123,7 +118,7 @@ class _MyAppState extends State<MyApp> {
 
   OutlinedButton _parseButton(String text, String processingMsg, String entity, List<List<String>> result, {bool square: false}) {
     return OutlinedButton(
-      style: OutlinedButton.styleFrom(
+        style: OutlinedButton.styleFrom(
           shape: BeveledRectangleBorder(),
           onSurface: Colors.white,
           side: BorderSide(color: result.isEmpty ? getInteractable() : getNeutral()),
@@ -164,7 +159,12 @@ class _MyAppState extends State<MyApp> {
           _processing[entity] = null;
           setState(() {});
         },
-        child: Text(_processing[entity] ?? text, style: TextStyle(color: result.isEmpty ? getInteractable() : getNeutral(), fontWeight: FontWeight.bold, fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily)));
+        child: Text(_processing[entity] ?? text,
+            style: TextStyle(
+                color: result.isEmpty ? getInteractable() : getNeutral(),
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                fontFamily: GoogleFonts.rajdhani().fontFamily)));
   }
 
   bool _calculationEnabled() {
@@ -179,13 +179,7 @@ class _MyAppState extends State<MyApp> {
             centerTitle: true,
             backgroundColor: Colors.black,
             title: Text('CYBERPWNED',
-                style: TextStyle(
-                    color: getNeutral(),
-                    fontFamily: GoogleFonts.rajdhani().fontFamily,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 25
-                )
-            ),
+                style: TextStyle(color: getNeutral(), fontFamily: GoogleFonts.rajdhani().fontFamily, fontWeight: FontWeight.bold, fontSize: 25)),
           ),
           body: Container(
             color: Colors.black,
@@ -193,18 +187,14 @@ class _MyAppState extends State<MyApp> {
               children: <Widget>[
                 SizedBox(height: 30),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 0),
-                    child: Padding(padding: EdgeInsets.all(15), child: TextField(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: TextField(
+                            textAlignVertical: TextAlignVertical.center,
                             maxLines: 1,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                color: getNeutral(),
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: GoogleFonts.rajdhani().fontFamily
-                            ),
+                                color: getNeutral(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
                             decoration: new InputDecoration(
-                                alignLabelWithHint: true,
                                 enabledBorder: OutlineInputBorder(
                                   borderSide: BorderSide(color: _bufferSize == null ? getInteractable() : getNeutral(), width: 3),
                                 ),
@@ -213,18 +203,17 @@ class _MyAppState extends State<MyApp> {
                                 ),
                                 labelText: "BUFFER SIZE",
                                 labelStyle: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: _bufferSize == null ? getInteractable() : getNeutral(),
-                                    fontFamily: GoogleFonts.rajdhani().fontFamily,
-                                )
-                            ),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: _bufferSize == null ? getInteractable() : getNeutral(),
+                                  fontFamily: GoogleFonts.rajdhani().fontFamily,
+                                )),
                             keyboardType: TextInputType.number,
                             cursorColor: Colors.white,
                             inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                             onSubmitted: (buffer) async {
                               int newBuffer = int.tryParse(buffer, radix: 10);
-                              _error["MISSING BUFFER SIZE"] = newBuffer != null ? "" : "Specify a buffer size before calculating an optimal path.";
+                              _error["MISSING BUFFER SIZE"] = newBuffer != null ? "" : "Specify buffer size before calculating path.";
 
                               if (newBuffer != null) {
                                 if (_bufferSize == null) {
@@ -237,62 +226,72 @@ class _MyAppState extends State<MyApp> {
                                 _bufferSize = newBuffer;
                                 setState(() {});
                               }
-                            })
-                    )),
+                            })),
                 SizedBox(height: 10),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 0),
-                    child: _parseButton('UPLOAD CODE MATRIX', "PARSING CODE MATRIX...", "matrix", _matrix,
-                        square: true)),
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: _parseButton('UPLOAD CODE MATRIX', "PARSING CODE MATRIX...", "Matrix", _matrix, square: true)),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Table(
                         children: _matrix
                             .asMap() // Need to know row's index
                             .entries
-                            .map((row) =>
-                            TableRow(
+                            .map((row) => TableRow(
                                 children: row.value
                                     .asMap() // Need to know column's index
                                     .entries
-                                    .map((column) =>
-                                    Padding(
+                                    .map((column) => Padding(
                                         padding: EdgeInsets.all(5),
                                         child: AnimatedContainer(
                                             duration: Duration(milliseconds: 1000),
                                             // Color cell depending on whether the coordinate is part of the optimal path
                                             // If the coordinate is part of the optimal path, show when it should be visited instead of displaying its value
-                                            child: DisplayCell.forMatrix(row.key, column.key, _bufferSize, _sequences, _solution, _matrix, showIndex: true).render())))
+                                            child: DisplayCell.forMatrix(row.key, column.key, _bufferSize, _sequences, _solution, _matrix,
+                                                    showIndex: true)
+                                                .render())))
                                     .toList()))
                             .toList())),
                 SizedBox(height: 10),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 0),
-                    child: _parseButton('UPLOAD SEQUENCES', "PARSING SEQUENCES...", "sequences", _sequences)),
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: _parseButton('UPLOAD SEQUENCES', "PARSING SEQUENCES...", "Sequences", _sequences)),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 50),
                     child: Table(
                         children: _sequences
                             .map((row) =>
-                        // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
-                        row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), "")).toList().asMap().entries.map((sequence) =>
-                            TableRow(children: sequence.value.asMap().entries.map((elm) =>
-                                Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 2),
-                                    child: AnimatedContainer(
-                                        duration: Duration(milliseconds: 300),
-                                        // Ignore the previously generated empty cells
-                                        child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, [sequence.value], _solution, _matrix).render())))
-                                .toList()))
+                                // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
+                                row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), ""))
+                            .toList()
+                            .asMap()
+                            .entries
+                            .map((sequence) => TableRow(
+                                children: sequence.value
+                                    .asMap()
+                                    .entries
+                                    .map((elm) => Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 2),
+                                        child: AnimatedContainer(
+                                            duration: Duration(milliseconds: 300),
+                                            // Ignore the previously generated empty cells
+                                            child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, [sequence.value], _solution, _matrix)
+                                                .render())))
+                                    .toList()))
                             .toList())),
                 SizedBox(height: 10),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    padding: EdgeInsets.symmetric(horizontal: 20),
                     child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
                           shape: BeveledRectangleBorder(),
                           onSurface: Colors.white,
-                          side: BorderSide(color: _processing["path"] != null ? getInteractable() : _error.keys.where((key) => _error[key] != "").toList().isEmpty ? getSuccess() : getFailure()),
+                          side: BorderSide(
+                              color: _processing["path"] != null
+                                  ? getInteractable()
+                                  : _error.keys.where((key) => _error[key] != "").toList().isEmpty
+                                      ? getSuccess()
+                                      : getFailure()),
                           backgroundColor: Colors.transparent,
                         ),
                         onPressed: () async {
@@ -301,16 +300,19 @@ class _MyAppState extends State<MyApp> {
                             _computeSolution("CALCULATING OPTIMAL PATH...", "path");
                           }
                         },
-                        child: Text(_processing["path"] ?? (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0], style: TextStyle(
-                            fontFamily: GoogleFonts.rajdhani().fontFamily,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: _processing["path"] != null ? getInteractable() : (_calculationEnabled() ? getSuccess() : getFailure()))))),
+                        child: Text(
+                            _processing["path"] ??
+                                (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
+                            style: TextStyle(
+                                fontFamily: GoogleFonts.rajdhani().fontFamily,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: _processing["path"] != null ? getInteractable() : (_calculationEnabled() ? getSuccess() : getFailure()))))),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 0),
-                    child: Text(_allErrors(), style: TextStyle(backgroundColor: Colors.red, fontSize: 15, fontFamily: GoogleFonts
-                    .rajdhani()
-                    .fontFamily), textAlign: TextAlign.justify)),
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(_allErrors(),
+                        style: TextStyle(color: _MyAppState.getFailure(), fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily),
+                        textAlign: TextAlign.justify)),
               ],
             ),
           )),
@@ -362,7 +364,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   String _parseError(String s) {
-    return "There was a problem parsing the $s.";
+    return "$s parsing failed, try to take another picture.";
   }
 }
 
