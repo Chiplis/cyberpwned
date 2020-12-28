@@ -470,15 +470,6 @@ class SequenceScore {
     } else {
       score += _decrease();
     }
-    if (_completed()) {
-      if (score == maxProgress) {
-        return maxScore();
-      } else if (bufferSize + 1 < maxProgress - score) {
-        return minScore();
-      } else {
-        return score;
-      }
-    }
     bufferSize--;
     return score;
   }
