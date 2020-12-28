@@ -489,7 +489,7 @@ class SequenceScore {
   }
 
   int minScore() {
-    return -(pow(10, rewardLevel+ 1));
+    return -rewardLevel-1;
   }
 
   // When the head of the sequence matches the targeted node, increase the score by 1
