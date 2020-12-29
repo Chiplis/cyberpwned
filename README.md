@@ -22,9 +22,9 @@ There are several ways of trying out the app:
 * If you'd like to run the application on your device without having to side-load it: https://stackoverflow.com/a/54526682/4572619
 * If you're willing to side-load the APK file, download it from: https://github.com/nicolas-siplis/cyberpwned/releases
 
-![Default breach screen](./media/screenshot/unsolved.png)
+![Default breach screen](./media/screenshot/error.jpg)
 
-![Solved breach screen](./media/screenshot/solved.png)
+![Solved breach screen](./media/screenshot/solved.jpg)
 
 
 
