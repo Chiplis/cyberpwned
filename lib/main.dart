@@ -41,7 +41,8 @@ class DisplayCell {
   }
 
   int _isPartOfSolution() {
-    if (bufferSize != solution.coords.length) return null;
+    if (bufferSize == null) return null;
+    if (solution.coords.length > bufferSize) return null;
     for (int i = 0; i < solution.coords.length; i++) {
       if (solution.coords[i][0] == x && solution.coords[i][1] == y) {
         return i + 1;
@@ -51,8 +52,9 @@ class DisplayCell {
   }
 
   Color _colorForCell(Color found, Color notFound) {
-    if (bufferSize != solution.coords.length) return _MyAppState.getInteractable();
+    if (bufferSize == null) return _MyAppState.getInteractable();
     if (solution.coords.isEmpty) return _MyAppState.getInteractable();
+    if (solution.coords.length > bufferSize) return _MyAppState.getInteractable();
 
     if (_cellType == CellType.SEQUENCE) {
       for (List<String> sequence in sequences) {
