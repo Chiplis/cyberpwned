@@ -438,33 +438,38 @@ class SequenceScore {
   List<String> sequence;
   int bufferSize;
   int rewardLevel;
-  int score = 0;
+  int progress = 0;
   int maxProgress;
-  int potential = 0;
+  int score = 0;
 
-  SequenceScore(Iterable<String> sequence, this.bufferSize, {int score: 0, int rewardLevel: 0}) {
+  SequenceScore(Iterable<String> sequence, this.bufferSize, {int progress: 0, int rewardLevel: 0}) {
     this.sequence = sequence.toList();
     this.rewardLevel = rewardLevel;
-    this.score = score;
+    this.progress = progress;
+    this.score = 0;
     maxProgress = this.sequence.length;
   }
 
   int compute(String compare) {
     if (_completed() || compare == null) {
-      if (score == maxProgress) {
+      if (progress == maxProgress) {
+        score = maxScore();
         return maxScore();
-      } else if (bufferSize + 1 < maxProgress - score) {
+      } else if (bufferSize < maxProgress - progress) {
+        score = minScore();
         return minScore();
       } else {
         return score;
       }
     }
-    if (sequence[score] == compare) {
-      score += _increase();
+    int oldProgress = progress;
+    if (sequence[progress] == compare) {
+      progress += _increase();
     } else {
-      score += _decrease();
+      progress += _decrease();
     }
     bufferSize--;
+    score += (progress - oldProgress) * pow(10, rewardLevel);
     return score;
   }
 
@@ -490,7 +495,7 @@ class SequenceScore {
   // If the sequence has been completed, set the score depending on the reward level
   int _increase() {
     if (_completed()) return 0;
-    potential += pow(10 * score, rewardLevel);
+    score += pow(10 * progress, rewardLevel);
     return 1;
   }
 
@@ -498,13 +503,13 @@ class SequenceScore {
   // If it's not possible to complete the sequence, set the score to a negative value depending on the reward
   int _decrease() {
     if (_completed()) return 0;
-    potential -= pow(10 * score, rewardLevel);
-    return _completed() ? 0 : score > 0 ? -1 : 0;
+    score -= pow(10 * progress, rewardLevel);
+    return progress > 0 ? -1 : 0;
   }
 
   // A sequence is considered completed if no further progress is possible or necessary
   bool _completed() {
-    return score == maxProgress || bufferSize == null || bufferSize < maxProgress - score;
+    return progress == maxProgress || bufferSize == null || bufferSize < maxProgress - progress;
   }
 }
 
@@ -544,7 +549,6 @@ class Path {
 
 class PathScore {
   int score;
-  int potential;
   Path path;
   int bufferSize;
   List<SequenceScore> sequenceScores = List<SequenceScore>();
@@ -565,7 +569,6 @@ class PathScore {
       sequenceScores.forEach((seqScore) => seqScore.compute(matrix[row][column]));
     });
     score = sequenceScores.map((seq) => seq.compute(null)).fold(0, (a, b) => a + b);
-    potential = sequenceScores.map((seq) => seq.potential).fold(0, (a, b) => a + b);
     return score;
   }
 
@@ -595,7 +598,7 @@ class PathGenerator {
     return coords;
   }
 
-  void _walkPaths(List<Path> partialPathsStack, int turn, List<List<int>> candidates) {
+  void _walkPaths(List<Path> partialPathsStack, int turn, List<List<int>> candidates, {List<Path> ls}) {
     Path path = partialPathsStack.removeAt(partialPathsStack.length - 1);
     candidates = candidates.where((candidate) => !path.coords.any((coord) => coord[0] == candidate[0] && coord[1] == candidate[1])).toList();
     for (List<int> coord in candidates) {
@@ -609,6 +612,7 @@ class PathGenerator {
       }
 
       if (score.compute() < 0) {
+        ls.add(newPath);
         continue;
       }
 
@@ -616,7 +620,7 @@ class PathGenerator {
         completedPaths.add(newPath);
       } else {
         partialPathsStack.add(newPath);
-        _walkPaths(partialPathsStack, turn + 1, _candidateCoords(turn + 1, coord));
+        _walkPaths(partialPathsStack, turn + 1, _candidateCoords(turn + 1, coord), ls: ls);
       }
     }
   }
@@ -626,9 +630,10 @@ class PathGenerator {
     if (bufferSize == 0) {
       return [Path([])];
     }
+    List<Path> ls = [];
     if (completedPaths.length == 0) {
       try {
-        _walkPaths([Path([])], 0, _candidateCoords(0, [0, 0]));
+        _walkPaths([Path([])], 0, _candidateCoords(0, [0, 0]), ls: ls);
       } on PathCompletedException {
         return completedPaths;
       }
