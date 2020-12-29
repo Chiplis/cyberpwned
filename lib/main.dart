@@ -601,13 +601,11 @@ class PathGenerator {
 
   void _walkPaths(List<Path> partialPathsStack, int turn, List<List<int>> candidates) {
     Path path = partialPathsStack.removeAt(partialPathsStack.length - 1);
+    candidates = candidates.where((candidate) => !path.coords.any((coord) => coord[0] == candidate[0] && coord[1] == candidate[1])).toList();
     for (List<int> coord in candidates) {
       Path newPath;
-      try {
-        newPath = path + Path([coord]);
-      } on DuplicateCoordinateException {
-        continue;
-      }
+      newPath = path + Path([coord]);
+
       PathScore score = PathScore(matrix, newPath, sequences, bufferSize);
       if (score.compute() == score.maxScore()) {
         completedPaths = [newPath];
