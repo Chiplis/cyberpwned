@@ -51,7 +51,8 @@ class DisplayCell {
   }
 
   Color _colorForCell(Color found, Color notFound) {
-    if (bufferSize != solution.coords.length || solution.coords.isEmpty) return _MyAppState.getNeutral();
+    if (bufferSize != solution.coords.length) return _MyAppState.getInteractable();
+    if (solution.coords.isEmpty) return _MyAppState.getInteractable();
 
     if (_cellType == CellType.SEQUENCE) {
       for (List<String> sequence in sequences) {
@@ -68,14 +69,20 @@ class DisplayCell {
 
   Widget render() {
     if (matrix.isEmpty || sequences.isEmpty) return Text("");
-    return Text(
-      showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : (_cellType == CellType.MATRIX ? matrix[x][y] : sequences[0][y]),
-      style: TextStyle(
-          color: _colorForCell(_MyAppState.getSuccess(), _MyAppState.getFailure()),
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          fontFamily: GoogleFonts.rajdhani().fontFamily),
-    );
+    return Padding(
+        padding: EdgeInsets.symmetric(vertical: 1),
+        child: AnimatedContainer(
+            decoration: BoxDecoration(color: _colorForCell(_MyAppState.getSuccess(), _MyAppState.getFailure())),
+            duration: Duration(milliseconds: 300),
+            child:Text(
+              showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : (_cellType == CellType.MATRIX ? matrix[x][y] : sequences[0][y]),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  backgroundColor: _colorForCell(_MyAppState.getSuccess(), _MyAppState.getFailure()),
+                  color: Colors.black,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: GoogleFonts.rajdhani().fontFamily))));
   }
 }
 
@@ -101,19 +108,19 @@ class _MyAppState extends State<MyApp> {
   Path _solution = Path([]);
 
   static Color getInteractable() {
-    return Colors.lightBlue;
+    return Colors.deepPurpleAccent;
   }
 
   static Color getNeutral() {
-    return Color(int.parse("0xffdaf759"));
+    return Colors.amber;
   }
 
   static Color getSuccess() {
-    return Colors.green;
+    return Colors.teal;
   }
 
   static Color getFailure() {
-    return Colors.redAccent;
+    return Colors.red;
   }
 
   OutlinedButton _parseButton(String text, String processingMsg, String entity, List<List<String>> result, {bool square: false}) {
@@ -121,8 +128,8 @@ class _MyAppState extends State<MyApp> {
         style: OutlinedButton.styleFrom(
           shape: BeveledRectangleBorder(),
           onSurface: Colors.white,
-          side: BorderSide(color: result.isEmpty ? getInteractable() : getNeutral()),
-          backgroundColor: Colors.transparent,
+          side: BorderSide(color: Colors.transparent),
+          backgroundColor: result.isEmpty ? getInteractable() : getNeutral(),
         ),
         onPressed: () async {
           try {
@@ -161,7 +168,7 @@ class _MyAppState extends State<MyApp> {
         },
         child: Text(_processing[entity] ?? text,
             style: TextStyle(
-                color: result.isEmpty ? getInteractable() : getNeutral(),
+                color: Colors.black,
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
                 fontFamily: GoogleFonts.rajdhani().fontFamily)));
@@ -187,7 +194,7 @@ class _MyAppState extends State<MyApp> {
               children: <Widget>[
                 SizedBox(height: 30),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 0),
                     child: TextField(
                             textAlignVertical: TextAlignVertical.center,
                             maxLines: 1,
@@ -229,10 +236,10 @@ class _MyAppState extends State<MyApp> {
                             })),
                 SizedBox(height: 10),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 0),
                     child: _parseButton('UPLOAD CODE MATRIX', "PARSING CODE MATRIX...", "Matrix", _matrix, square: true)),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 0),
                     child: Table(
                         children: _matrix
                             .asMap() // Need to know row's index
@@ -242,7 +249,7 @@ class _MyAppState extends State<MyApp> {
                                     .asMap() // Need to know column's index
                                     .entries
                                     .map((column) => Padding(
-                                        padding: EdgeInsets.all(5),
+                                        padding: EdgeInsets.all(2),
                                         child: AnimatedContainer(
                                             duration: Duration(milliseconds: 1000),
                                             // Color cell depending on whether the coordinate is part of the optimal path
@@ -254,10 +261,10 @@ class _MyAppState extends State<MyApp> {
                             .toList())),
                 SizedBox(height: 10),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 0),
                     child: _parseButton('UPLOAD SEQUENCES', "PARSING SEQUENCES...", "Sequences", _sequences)),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 50),
+                    padding: EdgeInsets.all(0),
                     child: Table(
                         children: _sequences
                             .map((row) =>
@@ -270,31 +277,21 @@ class _MyAppState extends State<MyApp> {
                                 children: sequence.value
                                     .asMap()
                                     .entries
-                                    .map((elm) => Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 2),
-                                        child: AnimatedContainer(
-                                            duration: Duration(milliseconds: 300),
-                                            // Ignore the previously generated empty cells
-                                            child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, [sequence.value], _solution, _matrix)
-                                                .render())))
-                                    .toList()))
-                            .toList())),
+                                    .map((elm) => DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, [sequence.value], _solution, _matrix).render()).toList()))
+                                    .toList())),
                 SizedBox(height: 10),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 0),
                     child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
                           shape: BeveledRectangleBorder(),
-                          onSurface: Colors.white,
                           side: BorderSide(
-                              color: _processing["path"] != null
-                                  ? getInteractable()
-                                  : _error.keys.where((key) => _error[key] != "").toList().isEmpty
-                                      ? getSuccess()
-                                      : getFailure()),
-                          backgroundColor: Colors.transparent,
+                              color: Colors.black,
+                          ),
+                          backgroundColor: _processing["path"] != null ? getInteractable() : (_calculationEnabled() ? getNeutral() : getFailure()),
                         ),
                         onPressed: () async {
+                          _solution = Path([]);
                           setState(() {});
                           if (_calculationEnabled()) {
                             _computeSolution("CALCULATING OPTIMAL PATH...", "path");
@@ -307,11 +304,11 @@ class _MyAppState extends State<MyApp> {
                                 fontFamily: GoogleFonts.rajdhani().fontFamily,
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: _processing["path"] != null ? getInteractable() : (_calculationEnabled() ? getSuccess() : getFailure()))))),
+                                color: Colors.black)))),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 0),
                     child: Text(_allErrors(),
-                        style: TextStyle(color: _MyAppState.getFailure(), fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily),
+                        style: TextStyle(color: _MyAppState.getFailure(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
                         textAlign: TextAlign.justify)),
               ],
             ),
@@ -447,6 +444,7 @@ class SequenceScore {
   int rewardLevel;
   int score = 0;
   int maxProgress;
+  int potential = 0;
 
   SequenceScore(Iterable<String> sequence, this.bufferSize, {int score: 0, int rewardLevel: 0}) {
     this.sequence = sequence.toList();
@@ -495,12 +493,16 @@ class SequenceScore {
   // When the head of the sequence matches the targeted node, increase the score by 1
   // If the sequence has been completed, set the score depending on the reward level
   int _increase() {
-    return _completed() ? 0 : 1;
+    if (_completed()) return 0;
+    potential += pow(10 * score, rewardLevel);
+    return 1;
   }
 
   // When an incorrect value is matched against the current head of the sequence, the score is decreased by 1 (can't go below 0)
   // If it's not possible to complete the sequence, set the score to a negative value depending on the reward
   int _decrease() {
+    if (_completed()) return 0;
+    potential -= pow(10 * score, rewardLevel);
     return _completed() ? 0 : score > 0 ? -1 : 0;
   }
 
@@ -546,6 +548,7 @@ class Path {
 
 class PathScore {
   int score;
+  int potential;
   Path path;
   int bufferSize;
   List<SequenceScore> sequenceScores = List<SequenceScore>();
@@ -566,6 +569,7 @@ class PathScore {
       sequenceScores.forEach((seqScore) => seqScore.compute(matrix[row][column]));
     });
     score = sequenceScores.map((seq) => seq.compute(null)).fold(0, (a, b) => a + b);
+    potential = sequenceScores.map((seq) => seq.potential).fold(0, (a, b) => a + b);
     return score;
   }
 
@@ -597,11 +601,13 @@ class PathGenerator {
 
   void _walkPaths(List<Path> partialPathsStack, int turn, List<List<int>> candidates) {
     Path path = partialPathsStack.removeAt(partialPathsStack.length - 1);
-    candidates = candidates.where((candidate) => !path.coords.any((coord) => coord[0] == candidate[0] && coord[1] == candidate[1])).toList();
     for (List<int> coord in candidates) {
       Path newPath;
-      newPath = path + Path([coord]);
-
+      try {
+        newPath = path + Path([coord]);
+      } on DuplicateCoordinateException {
+        continue;
+      }
       PathScore score = PathScore(matrix, newPath, sequences, bufferSize);
       if (score.compute() == score.maxScore()) {
         completedPaths = [newPath];
