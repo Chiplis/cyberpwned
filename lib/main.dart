@@ -499,7 +499,7 @@ class SequenceScore {
   // If it's not possible to complete the sequence, set the score to a negative value depending on the reward
   int _decrease() {
     if (_completed()) return 0;
-    score -= pow(10 * progress, rewardLevel);
+    score -= progress > 0 ? pow(10 * progress, rewardLevel) : 0;
     return progress > 0 ? -1 : 0;
   }
 
