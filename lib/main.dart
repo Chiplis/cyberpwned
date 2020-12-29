@@ -463,13 +463,9 @@ class SequenceScore {
       }
     }
     int oldProgress = progress;
-    if (sequence[progress] == compare) {
-      progress += _increase();
-    } else {
-      progress += _decrease();
-    }
-    bufferSize--;
+    progress += sequence[progress] == compare ? _increase() : _decrease();
     score += (progress - oldProgress) * pow(10, rewardLevel);
+    bufferSize--;
     return score;
   }
 
