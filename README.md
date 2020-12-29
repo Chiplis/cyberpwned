@@ -1,6 +1,6 @@
 # Cyberpwned
 
-Cyberpunk 2077 Hacking Minigame Resolver
+Cyberpunk 2077 Hacking Minigame Resolver - Play Store: https://play.google.com/store/apps/details?id=com.nicolassiplis.cyberpwned
 
 ## Requirements
     - Flutter
