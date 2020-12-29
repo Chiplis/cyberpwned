@@ -32,7 +32,7 @@ class DisplayCell {
   List<List<String>> matrix;
   CellType _cellType;
 
-  DisplayCell.forMatrix(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = false}) {
+  DisplayCell.forMatrix(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = true}) {
     this._cellType = CellType.MATRIX;
   }
 
@@ -78,9 +78,7 @@ class DisplayCell {
               showIndex ? (_isPartOfSolution()?.toString() ?? matrix[x][y].toString()) : (_cellType == CellType.MATRIX ? matrix[x][y] : sequences[0][y]),
               textAlign: TextAlign.center,
               style: TextStyle(
-                  backgroundColor: _colorForCell(_MyAppState.getSuccess(), _MyAppState.getFailure()),
-                  color: Colors.black,
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   fontFamily: GoogleFonts.rajdhani().fontFamily))));
   }
@@ -108,11 +106,11 @@ class _MyAppState extends State<MyApp> {
   Path _solution = Path([]);
 
   static Color getInteractable() {
-    return Colors.deepPurpleAccent;
+    return Colors.grey;
   }
 
   static Color getNeutral() {
-    return Colors.amber;
+    return Colors.orange;
   }
 
   static Color getSuccess() {
@@ -254,9 +252,7 @@ class _MyAppState extends State<MyApp> {
                                             duration: Duration(milliseconds: 1000),
                                             // Color cell depending on whether the coordinate is part of the optimal path
                                             // If the coordinate is part of the optimal path, show when it should be visited instead of displaying its value
-                                            child: DisplayCell.forMatrix(row.key, column.key, _bufferSize, _sequences, _solution, _matrix,
-                                                    showIndex: true)
-                                                .render())))
+                                            child: DisplayCell.forMatrix(row.key, column.key, _bufferSize, _sequences, _solution, _matrix).render())))
                                     .toList()))
                             .toList())),
                 SizedBox(height: 10),
