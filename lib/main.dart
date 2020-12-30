@@ -26,7 +26,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-
   Map<String, String> _error = {"MISSING BUFFER SIZE": "Specify buffer size before calculating path."};
 
   final TextRecognizer _textRecognizer = FirebaseVision.instance.textRecognizer();
@@ -52,7 +51,6 @@ class _MyAppState extends State<MyApp> {
 
   Map<String, String> _processing = {};
   Path _solution = Path([]);
-
 
   OutlinedButton _parseButton(String text, String processingMsg, String entity, CellGroup result, {bool square: false}) {
     return OutlinedButton(
@@ -98,11 +96,7 @@ class _MyAppState extends State<MyApp> {
           setState(() {});
         },
         child: Text(_processing[entity] ?? text,
-            style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                fontFamily: GoogleFonts.rajdhani().fontFamily)));
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily)));
   }
 
   @override
@@ -113,7 +107,8 @@ class _MyAppState extends State<MyApp> {
             centerTitle: true,
             backgroundColor: Colors.black,
             title: Text('CYBERPWNED',
-                style: TextStyle(color: AppColor.getNeutral(), fontFamily: GoogleFonts.rajdhani().fontFamily, fontWeight: FontWeight.bold, fontSize: 25)),
+                style: TextStyle(
+                    color: AppColor.getNeutral(), fontFamily: GoogleFonts.rajdhani().fontFamily, fontWeight: FontWeight.bold, fontSize: 25)),
           ),
           body: Container(
             color: Colors.black,
@@ -123,44 +118,44 @@ class _MyAppState extends State<MyApp> {
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
                     child: TextField(
-                            textAlignVertical: TextAlignVertical.center,
-                            maxLines: 1,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: AppColor.getNeutral(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
-                            decoration: new InputDecoration(
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3),
-                                ),
-                                labelText: "BUFFER SIZE",
-                                labelStyle: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(),
-                                  fontFamily: GoogleFonts.rajdhani().fontFamily,
-                                )),
-                            keyboardType: TextInputType.number,
-                            cursorColor: Colors.white,
-                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                            onSubmitted: (buffer) async {
-                              int newBuffer = int.tryParse(buffer, radix: 10);
-                              _error["MISSING BUFFER SIZE"] = newBuffer != null ? "" : "Specify buffer size before calculating path.";
+                        textAlignVertical: TextAlignVertical.center,
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: AppColor.getNeutral(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
+                        decoration: new InputDecoration(
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3),
+                            ),
+                            labelText: "BUFFER SIZE",
+                            labelStyle: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(),
+                              fontFamily: GoogleFonts.rajdhani().fontFamily,
+                            )),
+                        keyboardType: TextInputType.number,
+                        cursorColor: Colors.white,
+                        inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                        onSubmitted: (buffer) async {
+                          int newBuffer = int.tryParse(buffer, radix: 10);
+                          _error["MISSING BUFFER SIZE"] = newBuffer != null ? "" : "Specify buffer size before calculating path.";
 
-                              if (newBuffer != null) {
-                                if (_bufferSize == null) {
-                                  _bufferSize = newBuffer;
-                                  setState(() {});
-                                } else {
-                                  _bufferSize = newBuffer;
-                                }
-                              } else {
-                                _bufferSize = newBuffer;
-                                setState(() {});
-                              }
-                            })),
+                          if (newBuffer != null) {
+                            if (_bufferSize == null) {
+                              _bufferSize = newBuffer;
+                              setState(() {});
+                            } else {
+                              _bufferSize = newBuffer;
+                            }
+                          } else {
+                            _bufferSize = newBuffer;
+                            setState(() {});
+                          }
+                        })),
                 SizedBox(height: 10),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
@@ -195,15 +190,17 @@ class _MyAppState extends State<MyApp> {
                             .map((row) =>
                                 // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
                                 row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), ""))
-                            .toList()
                             .asMap()
                             .entries
                             .map((sequence) => TableRow(
                                 children: sequence.value
                                     .asMap()
                                     .entries
-                                    .map((elm) => DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, CellGroup([sequence.value]), _solution, _matrix).render()).toList()))
-                                    .toList())),
+                                    .map((elm) =>
+                                        DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, CellGroup([sequence.value]), _solution, _matrix)
+                                            .render())
+                                    .toList()))
+                            .toList())),
                 SizedBox(height: 10),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
@@ -211,9 +208,13 @@ class _MyAppState extends State<MyApp> {
                         style: OutlinedButton.styleFrom(
                           shape: BeveledRectangleBorder(),
                           side: BorderSide(
-                              color: Colors.black,
+                            color: Colors.black,
                           ),
-                          backgroundColor: _processing["path"] != null ? AppColor.getInteractable() : (Solution.calculationEnabled(_error, _bufferSize, _matrix, _sequences) ? AppColor.getNeutral() : AppColor.getFailure()),
+                          backgroundColor: _processing["path"] != null
+                              ? AppColor.getInteractable()
+                              : (Solution.calculationEnabled(_error, _bufferSize, _matrix, _sequences)
+                                  ? AppColor.getNeutral()
+                                  : AppColor.getFailure()),
                         ),
                         onPressed: () async {
                           _solution = Path([]);
@@ -226,14 +227,12 @@ class _MyAppState extends State<MyApp> {
                             _processing["path"] ??
                                 (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
                             style: TextStyle(
-                                fontFamily: GoogleFonts.rajdhani().fontFamily,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black)))),
+                                fontFamily: GoogleFonts.rajdhani().fontFamily, fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)))),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
                     child: Text(Solution.allErrors(_error),
-                        style: TextStyle(color: AppColor.getFailure(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
+                        style: TextStyle(
+                            color: AppColor.getFailure(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
                         textAlign: TextAlign.justify)),
               ],
             ),
@@ -245,11 +244,7 @@ class _MyAppState extends State<MyApp> {
     setState(() {});
     _processing[processingKey] = processingMsg;
     setState(() {});
-    compute(Solution.calculateSolution, {
-      "bufferSize": _bufferSize,
-      "matrix": _matrix,
-      "sequences": _sequences
-    }).then((solution) {
+    compute(Solution.calculateSolution, {"bufferSize": _bufferSize, "matrix": _matrix, "sequences": _sequences}).then((solution) {
       _solution = solution;
       _processing[processingKey] = null;
       setState(() {});

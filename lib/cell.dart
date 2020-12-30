@@ -185,18 +185,18 @@ class DisplayCell {
     this._cellType = CellType.SEQUENCE;
   }
 
-  int _isPartOfSolution() {
+  String _isPartOfSolution() {
     if (bufferSize == null) return null;
     if (solution.coords.length > bufferSize) return null;
     for (int i = 0; i < solution.coords.length; i++) {
       if (solution.coords[i][0] == x && solution.coords[i][1] == y) {
-        return i + 1;
+        return (i + 1).toString();
       }
     }
     return null;
   }
 
-  Color _colorForCell(Color found, Color notFound) {
+  Color _colorForCell() {
     if (bufferSize == null) return AppColor.getInteractable();
     if (solution.coords.isEmpty) return AppColor.getInteractable();
     if (solution.coords.length > bufferSize) return AppColor.getInteractable();
@@ -211,18 +211,17 @@ class DisplayCell {
     } else if (_cellType == CellType.MATRIX) {
       return (_isPartOfSolution() != null) ? AppColor.getSuccess() : AppColor.getFailure();
     }
-    return null;
+    return AppColor.getInteractable();
   }
 
   Widget render() {
-    if (matrix.isEmpty || sequences.isEmpty) return Text("");
     return Padding(
         padding: EdgeInsets.symmetric(vertical: 1),
         child: AnimatedContainer(
-            decoration: BoxDecoration(color: _colorForCell(AppColor.getSuccess(), AppColor.getFailure())),
+            decoration: BoxDecoration(color: _colorForCell()),
             duration: Duration(milliseconds: 300),
             child:Text(
-                showIndex ? (_isPartOfSolution()?.toString() ?? matrix.get(x, y).toString()) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.get(0, y)),
+                showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.get(0, y)),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 22,
