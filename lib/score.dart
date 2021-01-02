@@ -11,11 +11,11 @@ class SequenceScore {
   int maxProgress;
   int score = 0;
 
-  SequenceScore(Iterable<String> sequence, this.bufferSize, {int progress: 0, int rewardLevel: 0}) {
+  SequenceScore(Iterable<String> sequence, this.bufferSize, {int score: 0, int progress: 0, int rewardLevel: 0}) {
     this.sequence = sequence.toList();
     this.rewardLevel = rewardLevel;
     this.progress = progress;
-    this.score = 0;
+    this.score = score;
     maxProgress = this.sequence.length;
   }
 
@@ -23,18 +23,21 @@ class SequenceScore {
     if (_completed() || compare == null) {
       if (progress == maxProgress) {
         score = maxScore();
-        return maxScore();
       } else if (bufferSize < maxProgress - progress) {
         score = minScore();
-        return minScore();
-      } else {
-        return score;
       }
+      return score;
     }
     int oldProgress = progress;
     progress += sequence[progress] == compare ? _increase() : _decrease();
-    score += (progress - oldProgress) * pow(10, rewardLevel);
+    score += (progress - oldProgress) * pow(2, rewardLevel + 1);
     bufferSize--;
+    if (!_completed()) return score;
+    if (progress == maxProgress) {
+      score = maxScore();
+    } else if (bufferSize < maxProgress - progress) {
+      score = minScore();
+    }
     return score;
   }
 
@@ -44,31 +47,29 @@ class SequenceScore {
     return compute(null) == maxScore();
   }
 
+  // If the sequence has been completed, set the score depending on the reward level
   int maxScore() {
     // Can be adjusted to maximize either:
     //  a) highest quality rewards, possibly lesser quantity
     return pow(10, rewardLevel + 1);
     //  b) highest amount of rewards, possibly lesser quality
-    // this.score = 100 * (this.rewardLevel + 1);
+    // return 100 * (this.rewardLevel + 1);
   }
 
+  // If it's not possible to complete the sequence, set the score to a negative value depending on the reward
   int minScore() {
-    return -rewardLevel-1;
+    return -pow(10, rewardLevel + 1) * progress;
   }
 
   // When the head of the sequence matches the targeted node, increase the score by 1
-  // If the sequence has been completed, set the score depending on the reward level
   int _increase() {
     if (_completed()) return 0;
-    score += pow(10 * progress, rewardLevel);
     return 1;
   }
 
   // When an incorrect value is matched against the current head of the sequence, the score is decreased by 1 (can't go below 0)
-  // If it's not possible to complete the sequence, set the score to a negative value depending on the reward
   int _decrease() {
     if (_completed()) return 0;
-    score -= progress > 0 ? pow(10 * progress, rewardLevel) : 0;
     return progress > 0 ? -1 : 0;
   }
 
