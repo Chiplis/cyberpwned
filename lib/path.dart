@@ -3,12 +3,12 @@ import 'package:Cyberpwned/cell.dart';
 
 class DuplicateCoordinateException implements Exception {}
 
-class Path {
+class TraversedPath {
   final List<List<int>> coords;
 
-  Path(this.coords);
+  TraversedPath(this.coords);
 
-  Path operator +(Path other) {
+  TraversedPath operator +(TraversedPath other) {
     List<List<int>> newCoords = coords + other.coords;
     for (List<int> otherCoord in other.coords) {
       for (List<int> coord in coords) {
@@ -17,7 +17,7 @@ class Path {
         }
       }
     }
-    return Path(newCoords);
+    return TraversedPath(newCoords);
   }
 
   @override
@@ -33,7 +33,7 @@ class PathGenerator {
 
   PathGenerator(this.matrix, this.sequences, this.bufferSize);
 
-  List<Path> completedPaths = [];
+  List<TraversedPath> completedPaths = [];
 
   List<List<int>> _candidateCoords(int turn, List<int> coordinate) {
     List<List<int>> coords = (turn % 2 == 0
@@ -43,12 +43,12 @@ class PathGenerator {
     return coords;
   }
 
-  void _walkPaths(List<Path> partialPathsStack, int turn, List<List<int>> candidates, {List<Path> ls}) {
-    Path path = partialPathsStack.removeAt(partialPathsStack.length - 1);
+  void _walkPaths(List<TraversedPath> partialPathsStack, int turn, List<List<int>> candidates, {List<TraversedPath> ls}) {
+    TraversedPath path = partialPathsStack.removeAt(partialPathsStack.length - 1);
     candidates = candidates.where((candidate) => !path.coords.any((coord) => coord[0] == candidate[0] && coord[1] == candidate[1])).toList();
     for (List<int> coord in candidates) {
-      Path newPath;
-      newPath = path + Path([coord]);
+      TraversedPath newPath;
+      newPath = path + TraversedPath([coord]);
 
       PathScore score = PathScore(matrix, newPath, sequences, bufferSize);
       if (score.compute() == score.maxScore()) {
@@ -70,15 +70,15 @@ class PathGenerator {
     }
   }
 
-  List<Path> generate() {
+  List<TraversedPath> generate() {
     completedPaths.clear();
     if (bufferSize == 0) {
-      return [Path([])];
+      return [TraversedPath([])];
     }
-    List<Path> ls = [];
+    List<TraversedPath> ls = [];
     if (completedPaths.length == 0) {
       try {
-        _walkPaths([Path([])], 0, _candidateCoords(0, [0, 0]), ls: ls);
+        _walkPaths([TraversedPath([])], 0, _candidateCoords(0, [0, 0]), ls: ls);
       } on PathCompletedException {
         return completedPaths;
       }

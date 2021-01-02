@@ -38,7 +38,7 @@ class SequenceScore {
     return score;
   }
 
-  bool isCompletedBy(Path path, CellGroup matrix) {
+  bool isCompletedBy(TraversedPath path, CellGroup matrix) {
     if (path.coords.isEmpty) return null;
     path.coords.forEach((coord) => compute(matrix.get(coord[0], coord[1])));
     return compute(null) == maxScore();
@@ -80,11 +80,11 @@ class SequenceScore {
 
 class PathScore {
   int score;
-  Path path;
+  TraversedPath path;
   int bufferSize;
   List<SequenceScore> sequenceScores = List<SequenceScore>();
   CellGroup matrix;
-  static Map<Path, PathScore> previousScores = {};
+  static Map<TraversedPath, PathScore> previousScores = {};
 
   PathScore(this.matrix, this.path, CellGroup sequences, this.bufferSize) {
     sequences.asMap().forEach((rewardLevel, sequence) => sequenceScores.add(SequenceScore(sequence, bufferSize, rewardLevel: rewardLevel)));

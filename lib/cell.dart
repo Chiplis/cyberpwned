@@ -171,7 +171,7 @@ class DisplayCell {
   int x;
   int y;
   int bufferSize;
-  Path solution;
+  TraversedPath solution;
   bool showIndex = false;
   CellGroup sequences;
   CellGroup matrix;
@@ -197,7 +197,7 @@ class DisplayCell {
   }
 
   Color _colorForCell() {
-    if (bufferSize == null) return AppColor.getInteractable();
+    if (bufferSize == null) return AppColor.getDeactivated();
     if (solution.coords.isEmpty) return AppColor.getInteractable();
     if (solution.coords.length > bufferSize) return AppColor.getInteractable();
 
@@ -218,12 +218,13 @@ class DisplayCell {
     return Padding(
         padding: EdgeInsets.symmetric(vertical: 1),
         child: AnimatedContainer(
-            decoration: BoxDecoration(color: _colorForCell()),
+            decoration: BoxDecoration(color: _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX ? Border.all(color: _colorForCell()) : null),
             duration: Duration(milliseconds: 300),
             child:Text(
                 showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.get(0, y)),
                 textAlign: TextAlign.center,
                 style: TextStyle(
+                  color: _colorForCell(),
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     fontFamily: GoogleFonts.rajdhani().fontFamily))));

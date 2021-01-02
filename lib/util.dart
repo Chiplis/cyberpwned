@@ -8,8 +8,13 @@ import 'package:flutter/material.dart';
 
 
 class AppColor {
-  static Color getInteractable() {
+
+  static Color getDeactivated() {
     return Colors.grey;
+  }
+
+  static Color getInteractable() {
+    return Colors.blueAccent;
   }
 
   static Color getNeutral() {
@@ -40,14 +45,14 @@ class Solution {
     return result.trim();
   }
 
-  static Path calculateSolution(map) {
+  static TraversedPath calculateSolution(map) {
     CellGroup matrix = map["matrix"];
     CellGroup sequences = map["sequences"];
     int bufferSize = map["bufferSize"];
-    List<Path> allPaths = PathGenerator(matrix, sequences, bufferSize).generate();
+    List<TraversedPath> allPaths = PathGenerator(matrix, sequences, bufferSize).generate();
     int maxScore = 0;
-    Path maxPath = Path([]);
-    for (Path path in allPaths) {
+    TraversedPath maxPath = TraversedPath([]);
+    for (TraversedPath path in allPaths) {
       int newScore = PathScore(matrix, path, sequences, bufferSize).compute();
       if (newScore > maxScore) {
         maxScore = newScore;
