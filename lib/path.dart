@@ -56,7 +56,7 @@ class PathGenerator {
         throw PathCompletedException();
       }
 
-      if (score.compute() < score.minScore()) {
+      if (score.compute() == score.minScore()) {
         ls.add(newPath);
         continue;
       }
