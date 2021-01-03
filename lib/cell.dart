@@ -218,7 +218,7 @@ class DisplayCell {
     return Padding(
         padding: EdgeInsets.symmetric(vertical: 1),
         child: AnimatedContainer(
-            decoration: BoxDecoration(color: _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX ? Border.all(color: _colorForCell()) : null),
+            decoration: BoxDecoration(color: _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX ? Border.all(color: _colorForCell(), width: 2) : null),
             duration: Duration(milliseconds: 300),
             child:Text(
                 showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.get(0, y)),

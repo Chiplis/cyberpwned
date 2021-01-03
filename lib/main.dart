@@ -30,7 +30,7 @@ class CyberpunkButtonPainter extends CustomPainter {
   final PaintingStyle paintingStyle;
   final double strokeWidth;
 
-  CyberpunkButtonPainter({this.strokeColor, this.strokeWidth = 1, this.paintingStyle = PaintingStyle.fill});
+  CyberpunkButtonPainter({this.strokeColor, this.strokeWidth = 3, this.paintingStyle = PaintingStyle.fill});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -83,6 +83,7 @@ class _MyAppState extends State<MyApp> {
   final List<String> _validHex = ["1C", "FF", "E9", "BD", "55", "7A"];
 
   Future<void> _calculatePath() async {
+    if (_bufferSize == _solution.coords.length) return;
     _solution = TraversedPath([]);
     setState(() {});
     if (Solution.calculationEnabled(_error, _bufferSize, _matrix, _sequences)) {
@@ -134,8 +135,7 @@ class _MyAppState extends State<MyApp> {
             painter: CyberpunkButtonPainter(strokeColor: strokeColor, paintingStyle: PaintingStyle.fill),
             child: Padding(
                 padding: EdgeInsets.all(5),
-                child: Text(_processing[entity] ?? text,
-                    style: TextStyle(color: strokeColor.withOpacity(0.95), fontWeight: FontWeight.bold, fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily)))),
+                child: Text(_processing[entity] ?? text, style: TextStyle(color: strokeColor.withOpacity(0.95), fontWeight: FontWeight.bold, fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily)))),
         onPressed: onPressed);
   }
 
@@ -165,11 +165,15 @@ class _MyAppState extends State<MyApp> {
                         style: TextStyle(
                             color: AppColor.getNeutral(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
                         decoration: new InputDecoration(
+                          filled: true,
+                          hoverColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
+                          focusColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
+                          fillColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3),
+                              borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3)
                             ),
                             labelText: "BUFFER SIZE",
                             labelStyle: TextStyle(
@@ -184,26 +188,17 @@ class _MyAppState extends State<MyApp> {
                         onSubmitted: (buffer) async {
                           int newBuffer = int.tryParse(buffer, radix: 10);
                           _error["MISSING BUFFER SIZE"] = newBuffer != null ? "" : "Specify buffer size before calculating path.";
-
-                          if (newBuffer != null) {
-                            if (_bufferSize == null) {
-                              _bufferSize = newBuffer;
-                              setState(() {});
-                            } else {
-                              _bufferSize = newBuffer;
-                            }
-                          } else {
-                            _bufferSize = newBuffer;
-                            setState(() {});
-                          }
+                          _bufferSize = newBuffer;
+                          setState(() {});
                         })),
+                SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: AnimatedContainer(
                         duration: Duration(milliseconds: 10000),
                         child: _parseButton('SCAN CODE MATRIX', "Matrix", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(), _matrix, () => _parseGroup("Matrix", "UPLOADING CODE MATRIX", _matrix, true)))),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    padding: EdgeInsets.all(0),
                     child: Table(
                         children: _matrix
                             .asMap() // Need to know row's index
@@ -221,10 +216,12 @@ class _MyAppState extends State<MyApp> {
                                             child: DisplayCell.forMatrix(row.key, column.key, _bufferSize, _sequences, _solution, _matrix).render())))
                                     .toList()))
                             .toList())),
+                SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: _parseButton('SCAN SEQUENCES', "Sequences", _sequences.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
                         _sequences, () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false))),
+                SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Table(
@@ -243,17 +240,13 @@ class _MyAppState extends State<MyApp> {
                                             .render())
                                     .toList()))
                             .toList())),
-                  Padding(
+                SizedBox(height: 8),
+                Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
                     child: _parseButton(
-                        _processing["path"] ??
-                            (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
+                        _processing["path"] ?? (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
                         "Path",
-                        (_processing["path"] != null
-                            ? AppColor.getInteractable()
-                            : (Solution.calculationEnabled(_error, _bufferSize, _matrix, _sequences)
-                            ? AppColor.getNeutral()
-                            : AppColor.getFailure())).withAlpha(200),
+                        _processing["path"] != null ? AppColor.getInteractable() : _error.keys.where((k) => _error[k] != "").length > 0 ? AppColor.getFailure() : _bufferSize == _solution.coords.length ? AppColor.getSuccess() : AppColor.getNeutral(),
                         null,
                         () => _calculatePath())),
                 Padding(
