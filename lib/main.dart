@@ -200,6 +200,7 @@ class _MyAppState extends State<MyApp> {
                           int newBuffer = int.tryParse(buffer, radix: 10);
                           _error["MISSING BUFFER SIZE"] = newBuffer != null ? "" : "Specify buffer size before calculating path.";
                           if (newBuffer != _bufferSize) {
+                            _solutionFound = false;
                             _bufferSize = newBuffer;
                             _solution = TraversedPath([]);
                           }
@@ -235,8 +236,8 @@ class _MyAppState extends State<MyApp> {
                     padding: EdgeInsets.all(0),
                     child: _parseButton('SCAN SEQUENCES', "Sequences", _sequences.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(), () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false))),
                 SizedBox(height: 8),
-                AnimatedContainer(
-                    duration: Duration(milliseconds: 1000),
+                Padding(
+                    padding: EdgeInsets.all(10),
                     child: Table(
                         children: _sequences.wholeGroup
                             .map((seq) =>

@@ -13,9 +13,7 @@ class CellGroup implements Iterable<Iterable<String>> {
 
   CellGroup(this.wholeGroup, this.state);
 
-  List<List<String>> get _group {
-    return wholeGroup.where((r) => state[r.toString()] == null || state[r.toString()]).toList();
-  }
+  List<List<String>> get _group => wholeGroup.where((r) => state[r.toString()] == null || state[r.toString()]).toList();
 
   void clear() {
     _group.clear();
@@ -63,13 +61,8 @@ class CellGroup implements Iterable<Iterable<String>> {
     return _group.toString();
   }
 
-
   String get(int r, int c) {
     return _group[r][c];
-  }
-
-  List<String> getRow(int r) {
-    return _group[r];
   }
 
   @override
@@ -99,7 +92,6 @@ class CellGroup implements Iterable<Iterable<String>> {
   }
 
   @override
-  // TODO: implement first
   Iterable<String> get first => _group.first;
 
   @override
@@ -250,8 +242,8 @@ class DisplayCell {
   }
 
   Widget render() {
-    return AnimatedContainer(
-        duration: Duration(milliseconds: 1000),
+    return Padding(
+        padding: EdgeInsets.all(0),
         child: AnimatedContainer(
             decoration: BoxDecoration(color: _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX ? Border.all(color: _colorForCell(), width: 2) : null),
             duration: Duration(milliseconds: 300),
