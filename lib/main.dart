@@ -188,8 +188,11 @@ class _MyAppState extends State<MyApp> {
                         onSubmitted: (buffer) async {
                           int newBuffer = int.tryParse(buffer, radix: 10);
                           _error["MISSING BUFFER SIZE"] = newBuffer != null ? "" : "Specify buffer size before calculating path.";
-                          _bufferSize = newBuffer;
-                          setState(() {});
+                          if (newBuffer != _bufferSize) {
+                            _bufferSize = newBuffer;
+                            _solution = TraversedPath([]);
+                            setState(() {});
+                          }
                         })),
                 SizedBox(height: 8),
                 Padding(
