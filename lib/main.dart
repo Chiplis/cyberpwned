@@ -49,7 +49,7 @@ class CyberpunkButtonPainter extends CustomPainter {
   }
 
   Path getTrianglePath(double x, double y) {
-    return Path()..lineTo(x, 0)..lineTo(x, y / 30 * 27)..lineTo(x / 30 * 29.2, y)..lineTo(0, y)..lineTo(0, 0);
+    return Path()..lineTo(x, 0)..lineTo(x, y / 30 * 25)..lineTo(x / 30 * 28.5, y)..lineTo(0, y)..lineTo(0, 0);
   }
 
   @override
@@ -61,30 +61,40 @@ class CyberpunkButtonPainter extends CustomPainter {
 class _MyAppState extends State<MyApp> {
   Map<String, String> _error = {"MISSING BUFFER SIZE": "Specify buffer size before calculating path."};
 
+  CellGroup _matrix;
+  CellGroup _sequences;
+
+  bool _solutionFound = false;
+
+  @override
+  void initState() {
+    _matrix = CellGroup([
+      ["1C", "BD", "55", "E9", "55"],
+      ["1C", "BD", "1C", "55", "E9"],
+      ["55", "E9", "E9", "BD", "BD"],
+      ["55", "FF", "FF", "1C", "1C"],
+      ["FF", "E9", "1C", "BD", "FF"]
+    ], _sequencesState);
+
+    _sequences = CellGroup([
+      ["1C", "1C", "55"],
+      ["55", "FF", "1C"],
+      ["BD", "E9", "BD", "55"],
+      ["55", "1C", "FF", "BD"]
+    ], _sequencesState);
+    super.initState();
+  }
+
   final TextRecognizer _textRecognizer = FirebaseVision.instance.textRecognizer();
 
   int _bufferSize;
 
-  CellGroup _matrix = CellGroup([
-    ["1C", "BD", "55", "E9", "55"],
-    ["1C", "BD", "1C", "55", "E9"],
-    ["55", "E9", "E9", "BD", "BD"],
-    ["55", "FF", "FF", "1C", "1C"],
-    ["FF", "E9", "1C", "BD", "FF"]
-  ]);
-
-  CellGroup _sequences = CellGroup([
-    ["1C", "1C", "55"],
-    ["55", "FF", "1C"],
-    ["BD", "E9", "BD", "55"],
-    ["55", "1C", "FF", "BD"]
-  ]);
-
   final List<String> _validHex = ["1C", "FF", "E9", "BD", "55", "7A"];
 
   Future<void> _calculatePath() async {
-    if (_bufferSize == _solution.coords.length) return;
+    if (_solutionFound) return;
     _solution = TraversedPath([]);
+    _solutionFound = false;
     setState(() {});
     if (Solution.calculationEnabled(_error, _bufferSize, _matrix, _sequences)) {
       _computeSolution("CALCULATING OPTIMAL PATH...", "path");
@@ -129,7 +139,7 @@ class _MyAppState extends State<MyApp> {
 
   Map<String, String> _processing = {};
 
-  RawMaterialButton _parseButton(String text, String entity, Color strokeColor, CellGroup result, Future<void> Function() onPressed) {
+  RawMaterialButton _parseButton(String text, String entity, Color strokeColor, Future<void> Function() onPressed) {
     return RawMaterialButton(
         child: CustomPaint(
             painter: CyberpunkButtonPainter(strokeColor: strokeColor, paintingStyle: PaintingStyle.fill),
@@ -140,6 +150,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   TraversedPath _solution = TraversedPath([]);
+  Map<String, bool> _sequencesState = {};
 
   @override
   Widget build(BuildContext context) {
@@ -191,15 +202,15 @@ class _MyAppState extends State<MyApp> {
                           if (newBuffer != _bufferSize) {
                             _bufferSize = newBuffer;
                             _solution = TraversedPath([]);
-                            setState(() {});
                           }
+                          setState(() {});
                         })),
                 SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: AnimatedContainer(
                         duration: Duration(milliseconds: 10000),
-                        child: _parseButton('SCAN CODE MATRIX', "Matrix", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(), _matrix, () => _parseGroup("Matrix", "UPLOADING CODE MATRIX", _matrix, true)))),
+                        child: _parseButton('SCAN CODE MATRIX', "Matrix", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(), () => _parseGroup("Matrix", "UPLOADING CODE MATRIX", _matrix, true)))),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Table(
@@ -212,8 +223,8 @@ class _MyAppState extends State<MyApp> {
                                     .entries
                                     .map((column) => Padding(
                                         padding: EdgeInsets.all(2),
-                                        child: AnimatedContainer(
-                                            duration: Duration(milliseconds: 1000),
+                                        child: Padding(
+                                            padding: EdgeInsets.all(0),
                                             // Color cell depending on whether the coordinate is part of the optimal path
                                             // If the coordinate is part of the optimal path, show when it should be visited instead of displaying its value
                                             child: DisplayCell.forMatrix(row.key, column.key, _bufferSize, _sequences, _solution, _matrix).render())))
@@ -222,25 +233,33 @@ class _MyAppState extends State<MyApp> {
                 SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
-                    child: _parseButton('SCAN SEQUENCES', "Sequences", _sequences.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
-                        _sequences, () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false))),
+                    child: _parseButton('SCAN SEQUENCES', "Sequences", _sequences.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(), () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false))),
                 SizedBox(height: 8),
-                Padding(
-                    padding: EdgeInsets.all(0),
+                AnimatedContainer(
+                    duration: Duration(milliseconds: 1000),
                     child: Table(
-                        children: _sequences
-                            .map((row) =>
+                        children: _sequences.wholeGroup
+                            .map((seq) =>
                                 // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
-                                row + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - row.length), ""))
+                                seq + List.filled(max(0, _sequences.wholeGroup.map((r) => r.length).fold(0, max) - seq.length), ""))
+                            .toList()
                             .asMap()
                             .entries
                             .map((sequence) => TableRow(
-                                children: sequence.value
+                                children: ([MapEntry(-1, "")] + (sequence.value
                                     .asMap()
-                                    .entries
-                                    .map((elm) =>
-                                        DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, CellGroup([sequence.value]), _solution, _matrix)
-                                            .render())
+                                    .entries.toList()))
+                                    .map((elm) => elm.key >= 0
+                                    ? DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, CellGroup([sequence.value], _sequencesState), _solution, _matrix).render()
+                                    : _parseButton(_sequencesState[sequence.value.where((e) => e != "").toList().toString()] == null || _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ? "✓" : "✗", "toggle-sequence",
+                                    _sequencesState[sequence.value.where((e) => e != "").toList().toString()] == null || _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ? AppColor.getInteractable() : AppColor.getDeactivated(),
+                                        () async {
+                                      _solutionFound = false;
+                                      var key = sequence.value.where((e) => e != "").toList().toString();
+                                      var enabled = _sequencesState[key];
+                                      _sequencesState[key] = !(enabled == null || enabled);
+                                      setState(() {});
+                                    }))
                                     .toList()))
                             .toList())),
                 SizedBox(height: 8),
@@ -249,8 +268,7 @@ class _MyAppState extends State<MyApp> {
                     child: _parseButton(
                         _processing["path"] ?? (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
                         "Path",
-                        _processing["path"] != null ? AppColor.getInteractable() : _error.keys.where((k) => _error[k] != "").length > 0 ? AppColor.getFailure() : _bufferSize == _solution.coords.length ? AppColor.getSuccess() : AppColor.getNeutral(),
-                        null,
+                        _processing["path"] != null ? AppColor.getInteractable() : _error.keys.where((k) => _error[k] != "").length > 0 ? AppColor.getFailure() : _solutionFound ? AppColor.getSuccess() : AppColor.getNeutral(),
                         () => _calculatePath())),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
@@ -270,6 +288,7 @@ class _MyAppState extends State<MyApp> {
     setState(() {});
     compute(Solution.calculateSolution, {"bufferSize": _bufferSize, "matrix": _matrix, "sequences": _sequences}).then((solution) {
       _solution = solution;
+      _solutionFound = true;
       _processing[processingKey] = null;
       setState(() {});
     }, onError: (error) {

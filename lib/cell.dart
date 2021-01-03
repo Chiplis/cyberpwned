@@ -8,9 +8,14 @@ import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CellGroup implements Iterable<Iterable<String>> {
-  List<List<String>> _group = [];
+  List<List<String>> wholeGroup;
+  Map<String, bool> state;
 
-  CellGroup(this._group);
+  CellGroup(this.wholeGroup, this.state);
+
+  List<List<String>> get _group {
+    return wholeGroup.where((r) => state[r.toString()] == null || state[r.toString()]).toList();
+  }
 
   void clear() {
     _group.clear();
@@ -28,6 +33,22 @@ class CellGroup implements Iterable<Iterable<String>> {
     return _group.any(f);
   }
 
+  bool remove(List<String> elm) {
+    return _group.remove(elm);
+  }
+
+  List<String> removeAt(int idx) {
+    return _group.removeAt(idx);
+  }
+
+  void add(List<String> elm) {
+    _group.add(elm);
+  }
+
+  void insert(int idx, List<String> elm) {
+    _group.insert(idx, elm);
+  }
+
   void addAll(Iterable<List<String>> it) {
     _group.addAll(it);
   }
@@ -37,9 +58,18 @@ class CellGroup implements Iterable<Iterable<String>> {
   int get length { return _group.length; }
 
 
+  @override
+  String toString() {
+    return _group.toString();
+  }
+
 
   String get(int r, int c) {
     return _group[r][c];
+  }
+
+  List<String> getRow(int r) {
+    return _group[r];
   }
 
   @override
@@ -198,6 +228,11 @@ class DisplayCell {
 
   Color _colorForCell() {
     if (bufferSize == null) return AppColor.getDeactivated();
+    if (_cellType == CellType.SEQUENCE) {
+      if (!(matrix.state[sequences.wholeGroup[0].where((e) => e != "").toList().toString()] == null || matrix.state[sequences.wholeGroup[0].where((e) => e != "").toList().toString()])) {
+        return AppColor.getDeactivated();
+      }
+    }
     if (solution.coords.isEmpty) return AppColor.getInteractable();
     if (solution.coords.length > bufferSize) return AppColor.getInteractable();
 
@@ -215,13 +250,13 @@ class DisplayCell {
   }
 
   Widget render() {
-    return Padding(
-        padding: EdgeInsets.symmetric(vertical: 1),
+    return AnimatedContainer(
+        duration: Duration(milliseconds: 1000),
         child: AnimatedContainer(
             decoration: BoxDecoration(color: _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX ? Border.all(color: _colorForCell(), width: 2) : null),
             duration: Duration(milliseconds: 300),
             child:Text(
-                showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.get(0, y)),
+                showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.wholeGroup[0][y]),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: _colorForCell(),
