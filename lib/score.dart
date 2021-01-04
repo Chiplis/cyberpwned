@@ -23,13 +23,10 @@ class SequenceScore {
     if (_completed() || compare == null) {
       if (progress == maxProgress) {
         score = maxScore();
-        return maxScore();
       } else if (bufferSize < maxProgress - progress) {
         score = minScore();
-        return minScore();
-      } else {
-        return score;
       }
+      return score;
     }
     int oldProgress = progress;
     progress += sequence[progress] == compare ? _increase() : _decrease();
@@ -60,7 +57,6 @@ class SequenceScore {
   // If the sequence has been completed, set the score depending on the reward level
   int _increase() {
     if (_completed()) return 0;
-    score += pow(10 * progress, rewardLevel);
     return 1;
   }
 
@@ -68,7 +64,6 @@ class SequenceScore {
   // If it's not possible to complete the sequence, set the score to a negative value depending on the reward
   int _decrease() {
     if (_completed()) return 0;
-    score -= progress > 0 ? pow(10 * progress, rewardLevel) : 0;
     return progress > 0 ? -1 : 0;
   }
 
