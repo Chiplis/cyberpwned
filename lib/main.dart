@@ -123,15 +123,15 @@ class _MyAppState extends State<MyApp> {
           .toList()
           .where((block) => !block.text.split(" ").any((possibleHex) => !_validHex.contains(possibleHex)))
           .map((block) => SequenceCapture.fromBlock(block))
-          .toList());
+          .toList(), square);
 
       result.addAll(allSequences.get().map((seqGroup) => seqGroup.sequence));
 
       if (result.length == 0 || (square && result.any((row) => row.length != result.length))) {
-        result.clear();
         throw Exception("Invalid size.");
       }
     } catch (e) {
+      result.clear();
       _error["${entity.toUpperCase()} PARSE ERROR"] = Solution.parseError(entity);
     }
     _processing[entity] = null;

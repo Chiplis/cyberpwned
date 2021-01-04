@@ -4,14 +4,39 @@ import 'package:firebase_ml_vision/firebase_ml_vision.dart';
 
 class SequenceGroup {
   List<SequenceCapture> group = [];
-
-  SequenceGroup(this.group);
+  final bool square;
+  SequenceGroup(this.group, this.square);
 
   void _order() {
     double minDiff = double.infinity;
 
     List<int> matchIndexes = [];
     List<SequenceCapture> matchCaptures = [];
+
+    if (square) {
+      double size = sqrt(group.map((e) => e.sequence.length).fold(0, (total, element) => total + element));
+      if (size % 1 != 0) {
+        throw Exception("Invalid size.");
+      }
+      group.sort((a, b) => -(a.top.compareTo(b.top)));
+
+      List<SequenceCapture> sortedGroup = [];
+      int sortedGroupSize = 0;
+
+      List<SequenceCapture> result = [];
+      for (int i = 0; i < group.length; i++) {
+        sortedGroupSize += group[i].sequence.length;
+        sortedGroup.add(group[i]);
+        if (sortedGroupSize == size) {
+          result.add(sortedGroup.reduce((a, b) => a + b));
+          sortedGroup.clear();
+          sortedGroupSize = 0;
+        }
+      }
+      group.clear();
+      group.addAll(result);
+      return;
+    }
 
     for (int i = 0; i < group.length; i++) {
       for (int j = 0; j < group.length; j++) {
