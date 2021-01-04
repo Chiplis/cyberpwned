@@ -1,6 +1,7 @@
 import 'package:Cyberpwned/path.dart';
 import 'package:Cyberpwned/score.dart';
 import 'package:Cyberpwned/util.dart';
+import 'package:flutter/material.dart';
 
 import 'dart:ui';
 
@@ -8,12 +9,11 @@ import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CellGroup implements Iterable<Iterable<String>> {
-  List<List<String>> wholeGroup;
   Map<String, bool> state;
 
-  CellGroup(this.wholeGroup, this.state);
+  CellGroup(this._group, this.state);
 
-  List<List<String>> get _group => wholeGroup.where((r) => state[r.toString()] == null || state[r.toString()]).toList();
+  List<List<String>> _group = [];
 
   void clear() {
     _group.clear();
@@ -185,9 +185,13 @@ class CellGroup implements Iterable<Iterable<String>> {
   Iterable<T> whereType<T>() {
     return _group.whereType();
   }
+
+  List<String> getRow(int i) {
+    return _group[i];
+  }
 }
 
-enum CellType { MATRIX, SEQUENCE }
+enum CellType { MATRIX, SEQUENCE, TOGGLE }
 
 class DisplayCell {
   int x;
@@ -207,6 +211,10 @@ class DisplayCell {
     this._cellType = CellType.SEQUENCE;
   }
 
+  DisplayCell.forToggle(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = false}) {
+    this._cellType = CellType.TOGGLE;
+  }
+
   String _isPartOfSolution() {
     if (bufferSize == null) return null;
     if (solution.coords.length > bufferSize) return null;
@@ -221,7 +229,7 @@ class DisplayCell {
   Color _colorForCell() {
     if (bufferSize == null) return AppColor.getDeactivated();
     if (_cellType == CellType.SEQUENCE) {
-      if (!(matrix.state[sequences.wholeGroup[0].where((e) => e != "").toList().toString()] == null || matrix.state[sequences.wholeGroup[0].where((e) => e != "").toList().toString()])) {
+      if (!(matrix.state[sequences.getRow(0).where((e) => e != "").toList().toString()] == null || matrix.state[sequences.getRow(0).where((e) => e != "").toList().toString()])) {
         return AppColor.getDeactivated();
       }
     }
@@ -241,18 +249,18 @@ class DisplayCell {
     return AppColor.getInteractable();
   }
 
-  Widget render() {
-    return Padding(
-        padding: EdgeInsets.all(0),
+  Widget render([String elm, Color color, onTap, double size]) {
+    return InkWell(
+        onTap: onTap,
         child: AnimatedContainer(
-            decoration: BoxDecoration(color: _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX ? Border.all(color: _colorForCell(), width: 2) : null),
+            decoration: BoxDecoration(color: color?.withOpacity(0.3) ?? _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX || _cellType == CellType.TOGGLE ? Border.all(color: color ?? _colorForCell(), width: 2) : Border.symmetric(horizontal: BorderSide(color: color ?? _colorForCell(), width: 2))),
             duration: Duration(milliseconds: 300),
-            child:Text(
-                showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.wholeGroup[0][y]),
+            child: Text(
+                elm ?? (showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.get(0, y))),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: _colorForCell(),
-                    fontSize: 22,
+                  color: color ?? _colorForCell(),
+                    fontSize: size ?? 22,
                     fontWeight: FontWeight.bold,
                     fontFamily: GoogleFonts.rajdhani().fontFamily))));
   }

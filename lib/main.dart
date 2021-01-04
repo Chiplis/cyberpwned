@@ -103,6 +103,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _parseGroup(String entity, String processingMsg, CellGroup result, bool square) async {
     try {
+      _sequencesState = {};
       var file = await ImagePicker().getImage(source: ImageSource.camera);
       if (file == null) {
         return;
@@ -145,7 +146,12 @@ class _MyAppState extends State<MyApp> {
             painter: CyberpunkButtonPainter(strokeColor: strokeColor, paintingStyle: PaintingStyle.fill),
             child: Padding(
                 padding: EdgeInsets.all(5),
-                child: Text(_processing[entity] ?? text, style: TextStyle(color: strokeColor.withOpacity(0.95), fontWeight: FontWeight.bold, fontSize: 20, fontFamily: GoogleFonts.rajdhani().fontFamily)))),
+                child: Text(_processing[entity] ?? text,
+                    style: TextStyle(
+                        color: strokeColor.withOpacity(0.95),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        fontFamily: GoogleFonts.rajdhani().fontFamily)))),
         onPressed: onPressed);
   }
 
@@ -176,16 +182,15 @@ class _MyAppState extends State<MyApp> {
                         style: TextStyle(
                             color: AppColor.getNeutral(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
                         decoration: new InputDecoration(
-                          filled: true,
-                          hoverColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
-                          focusColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
-                          fillColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
+                            filled: true,
+                            hoverColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
+                            focusColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
+                            fillColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3)
-                            ),
+                                borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3)),
                             labelText: "BUFFER SIZE",
                             labelStyle: TextStyle(
                               fontSize: 20,
@@ -211,7 +216,8 @@ class _MyAppState extends State<MyApp> {
                     padding: EdgeInsets.all(0),
                     child: AnimatedContainer(
                         duration: Duration(milliseconds: 10000),
-                        child: _parseButton('SCAN CODE MATRIX', "Matrix", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(), () => _parseGroup("Matrix", "UPLOADING CODE MATRIX", _matrix, true)))),
+                        child: _parseButton('SCAN CODE MATRIX', "Matrix", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
+                            () => _parseGroup("Matrix", "UPLOADING CODE MATRIX", _matrix, true)))),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Table(
@@ -234,42 +240,54 @@ class _MyAppState extends State<MyApp> {
                 SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
-                    child: _parseButton('SCAN SEQUENCES', "Sequences", _sequences.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(), () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false))),
+                    child: _parseButton('SCAN SEQUENCES', "Sequences", _sequences.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
+                        () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false))),
                 SizedBox(height: 8),
                 Padding(
-                    padding: EdgeInsets.all(10),
+                    padding: EdgeInsets.all(0),
                     child: Table(
-                        children: _sequences.wholeGroup
+                        children: _sequences
                             .map((seq) =>
                                 // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
-                                seq + List.filled(max(0, _sequences.wholeGroup.map((r) => r.length).fold(0, max) - seq.length), ""))
+                                seq + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - seq.length), ""))
                             .toList()
                             .asMap()
                             .entries
                             .map((sequence) => TableRow(
-                                children: ([MapEntry(-1, "")] + (sequence.value
-                                    .asMap()
-                                    .entries.toList()))
+                                children: ([MapEntry(-1, "")] + (sequence.value.asMap().entries.toList()))
                                     .map((elm) => elm.key >= 0
-                                    ? DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, CellGroup([sequence.value], _sequencesState), _solution, _matrix).render()
-                                    : _parseButton(_sequencesState[sequence.value.where((e) => e != "").toList().toString()] == null || _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ? "✓" : "✗", "toggle-sequence",
-                                    _sequencesState[sequence.value.where((e) => e != "").toList().toString()] == null || _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ? AppColor.getInteractable() : AppColor.getDeactivated(),
-                                        () async {
-                                      _solutionFound = false;
-                                      var key = sequence.value.where((e) => e != "").toList().toString();
-                                      var enabled = _sequencesState[key];
-                                      _sequencesState[key] = !(enabled == null || enabled);
-                                      setState(() {});
-                                    }))
+                                        ? Padding(padding: EdgeInsets.symmetric(vertical: 2), child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, CellGroup([sequence.value], _sequencesState), _solution, _matrix).render())
+                                        : Padding(padding: EdgeInsets.symmetric(horizontal: 2), child: DisplayCell.forToggle(null, null, _bufferSize, null, _solution, null).render(
+                                            _sequencesState[sequence.value.where((e) => e != "").toList().toString()] == null ||
+                                                    _sequencesState[sequence.value.where((e) => e != "").toList().toString()]
+                                                ? "✓"
+                                                : "✗",
+                                            _sequencesState[sequence.value.where((e) => e != "").toList().toString()] == null ||
+                                                    _sequencesState[sequence.value.where((e) => e != "").toList().toString()]
+                                                ? AppColor.getInteractable()
+                                                : AppColor.getDeactivated(), () async {
+                                            _solutionFound = false;
+                                            var key = sequence.value.where((e) => e != "").toList().toString();
+                                            var enabled = _sequencesState[key];
+                                            _sequencesState[key] = !(enabled == null || enabled);
+                                            setState(() {});
+                                          }, 23)))
                                     .toList()))
                             .toList())),
                 SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
                     child: _parseButton(
-                        _processing["path"] ?? (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
+                        _processing["path"] ??
+                            (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
                         "Path",
-                        _processing["path"] != null ? AppColor.getInteractable() : _error.keys.where((k) => _error[k] != "").length > 0 ? AppColor.getFailure() : _solutionFound ? AppColor.getSuccess() : AppColor.getNeutral(),
+                        _processing["path"] != null
+                            ? AppColor.getInteractable()
+                            : _error.keys.where((k) => _error[k] != "").length > 0
+                                ? AppColor.getFailure()
+                                : _solutionFound
+                                    ? AppColor.getSuccess()
+                                    : AppColor.getNeutral(),
                         () => _calculatePath())),
                 Padding(
                     padding: EdgeInsets.symmetric(horizontal: 0),
@@ -287,7 +305,12 @@ class _MyAppState extends State<MyApp> {
     setState(() {});
     _processing[processingKey] = processingMsg;
     setState(() {});
-    compute(Solution.calculateSolution, {"bufferSize": _bufferSize, "matrix": _matrix, "sequences": _sequences}).then((solution) {
+    compute(Solution.calculateSolution, {
+      "bufferSize": _bufferSize,
+      "matrix": _matrix,
+      "sequences": CellGroup(
+          _sequences.where((element) => _sequencesState[element.toString()] == null || _sequencesState[element.toString()]).toList(), _sequencesState)
+    }).then((solution) {
       _solution = solution;
       _solutionFound = true;
       _processing[processingKey] = null;
