@@ -92,6 +92,6 @@ class SequenceCapture {
   SequenceCapture operator +(SequenceCapture other) {
     if (this == other || other == null) return this;
     return SequenceCapture(min(left, other.left), max(right, other.right), max(bottom, other.bottom), min(top, other.top),
-        left < other.left ? sequence + other.sequence : other.sequence + sequence);
+        left <= other.left ? sequence + other.sequence : other.sequence + sequence);
   }
 }
