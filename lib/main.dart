@@ -103,7 +103,6 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _parseGroup(String entity, String processingMsg, CellGroup result, bool square) async {
     try {
-      _sequencesState = {};
       var file = await ImagePicker().getImage(source: ImageSource.camera);
       if (file == null) {
         return;
@@ -113,6 +112,7 @@ class _MyAppState extends State<MyApp> {
       _error["${entity.toUpperCase()} PARSE ERROR"] = "";
       _solution = TraversedPath([]);
       result.clear();
+      _sequencesState.clear();
 
       setState(() {});
 
