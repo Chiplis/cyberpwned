@@ -2,6 +2,7 @@ import 'package:Cyberpwned/path.dart';
 import 'package:Cyberpwned/sequence.dart';
 import 'package:Cyberpwned/util.dart';
 import 'package:Cyberpwned/cell.dart';
+import 'package:app_review/app_review.dart';
 
 import 'dart:async';
 import 'dart:math';
@@ -13,7 +14,26 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'dart:io' show Platform;
+
+/// If the current platform is desktop, override the default platform to
+/// a supported platform (iOS for macOS, Android for Linux and Windows).
+/// Otherwise, do nothing.
+void _setTargetPlatformForDesktop() {
+  TargetPlatform targetPlatform;
+  if (Platform.isMacOS) {
+    targetPlatform = TargetPlatform.iOS;
+  } else if (Platform.isLinux || Platform.isWindows) {
+    targetPlatform = TargetPlatform.android;
+  }
+  if (targetPlatform != null) {
+    debugDefaultTargetPlatformOverride = targetPlatform;
+  }
+}
+
 Future<void> main() async {
+  if (!kIsWeb) _setTargetPlatformForDesktop();
+
   runApp(MaterialApp(
       theme: ThemeData(primarySwatch: Colors.amber, fontFamily: GoogleFonts.rajdhani().fontFamily, textTheme: GoogleFonts.solwayTextTheme()),
       home: MyApp(),
@@ -65,6 +85,8 @@ class _MyAppState extends State<MyApp> {
   CellGroup _sequences;
 
   bool _solutionFound = false;
+
+  String appID = "";
 
   @override
   void initState() {
@@ -301,6 +323,8 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  int _reviewCounter = 0;
+
   void _computeSolution(String processingMsg, String processingKey) {
     setState(() {});
     _processing[processingKey] = processingMsg;
@@ -314,7 +338,14 @@ class _MyAppState extends State<MyApp> {
       _solution = solution;
       _solutionFound = true;
       _processing[processingKey] = null;
+      _reviewCounter++;
       setState(() {});
+      if (_reviewCounter % 2 == 0) {
+        AppReview.requestReview.then((String onValue) {
+          setState(() {});
+          print("App ID" + onValue);
+        });
+      }
     }, onError: (error) {
       _error["CALCULATION ERROR"] = error.toString();
     });
