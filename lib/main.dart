@@ -133,9 +133,9 @@ class _MyAppState extends State<MyApp> {
       _processing[entity] = processingMsg;
       _error["${entity.toUpperCase()} PARSE ERROR"] = "";
       _solution = TraversedPath([]);
+      _solutionFound = false;
       result.clear();
       _sequencesState.clear();
-
       setState(() {});
 
       final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFilePath(file.path);
@@ -341,10 +341,7 @@ class _MyAppState extends State<MyApp> {
       _reviewCounter++;
       setState(() {});
       if (_reviewCounter % 2 == 0) {
-        AppReview.requestReview.then((String onValue) {
-          setState(() {});
-          print("App ID" + onValue);
-        });
+        AppReview.requestReview.then((onValue) => setState(() {}));
       }
     }, onError: (error) {
       _error["CALCULATION ERROR"] = error.toString();
