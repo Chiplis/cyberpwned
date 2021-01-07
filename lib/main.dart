@@ -132,6 +132,7 @@ class _MyAppState extends State<MyApp> {
 
       _processing[entity] = processingMsg;
       _error["${entity.toUpperCase()} PARSE ERROR"] = "";
+      _error["exception"] = "";
       _solution = TraversedPath([]);
       _solutionFound = false;
       result.clear();
@@ -150,11 +151,12 @@ class _MyAppState extends State<MyApp> {
       result.addAll(allSequences.get().map((seqGroup) => seqGroup.sequence));
 
       if (result.length == 0 || (square && result.any((row) => row.length != result.length))) {
-        throw Exception("Invalid size.");
+        throw Exception("Invalid matrix size: ${result.map((r) => r.length).fold(0, (a, b) => a + b)} elements parsed.");
       }
     } catch (e) {
       result.clear();
       _error["${entity.toUpperCase()} PARSE ERROR"] = Solution.parseError(entity);
+      _error["exception"] = e.message;
     }
     _processing[entity] = null;
     setState(() {});
