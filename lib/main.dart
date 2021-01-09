@@ -91,18 +91,19 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     _matrix = CellGroup([
-      ["1C", "BD", "55", "E9", "55"],
-      ["1C", "BD", "1C", "55", "E9"],
-      ["55", "E9", "E9", "BD", "BD"],
-      ["55", "FF", "FF", "1C", "1C"],
-      ["FF", "E9", "1C", "BD", "FF"]
+      ["55", "BD", "55", "1C", "1C", "55", "55"],
+      ["7A", "7A", "1C", "1C", "1C", "1C", "E9"],
+      ["1C", "E9", "E9", "55", "1C", "FF", "E9"],
+      ["BD", "55", "55", "1C", "55", "1C", "1C"],
+      ["1C", "55", "E9", "BD", "55", "55", "7A"],
+      ["E9", "1C", "BD", "FF", "E9", "FF", "7A"],
+      ["E9", "7A", "1C", "55", "E9", "55", "1C"],
     ], _sequencesState);
 
     _sequences = CellGroup([
-      ["1C", "1C", "55"],
-      ["55", "FF", "1C"],
-      ["BD", "E9", "BD", "55"],
-      ["55", "1C", "FF", "BD"]
+      ["55", "E9", "E9"],
+      ["E9", "1C"],
+      ["55", "55", "55"],
     ], _sequencesState);
     super.initState();
   }
