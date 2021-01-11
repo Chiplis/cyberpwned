@@ -75,8 +75,12 @@ class SequenceScore {
     if (_completed()) return 0;
     if (progress == 0) return 0;
     int i = progress;
-    while (i != 0 && sequence[i--] == compare) {}
-    return -progress + i;
+    while (i != 0 && sequence[--i] != compare) {}
+    if (sequence[i] == compare) {
+      return -progress + i + 1;
+    } else {
+      return -progress;
+    }
   }
 
   // A sequence is considered completed if no further progress is possible or necessary
