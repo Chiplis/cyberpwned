@@ -65,6 +65,10 @@ class CellGroup implements Iterable<Iterable<String>> {
     return _group[r][c];
   }
 
+  void set(int r, int c, String v) {
+    _group[r][c] = v;
+  }
+
   @override
   Iterable<R> cast<R>() {
     // TODO: implement cast
@@ -243,13 +247,13 @@ class DisplayCell {
         }
       }
       return AppColor.getFailure();
-    } else if (_cellType == CellType.MATRIX) {
+    } else if (_cellType != CellType.SEQUENCE) {
       return (_isPartOfSolution() != null) ? AppColor.getSuccess() : AppColor.getFailure();
     }
     return AppColor.getInteractable();
   }
 
-  Widget render([String elm, Color color, onTap, double size]) {
+  Widget render([String elm, Color color, onTap]) {
     return InkWell(
         onTap: onTap,
         child: AnimatedContainer(
@@ -259,8 +263,8 @@ class DisplayCell {
                 elm ?? (showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.get(0, y))),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: color ?? _colorForCell(),
-                    fontSize: size ?? 22,
+                    color: color ?? _colorForCell(),
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     fontFamily: GoogleFonts.rajdhani().fontFamily))));
   }

@@ -16,7 +16,7 @@ class SequenceScore {
     this.rewardLevel = rewardLevel;
     this.progress = progress;
     this.score = 0;
-    maxProgress = this.sequence.length;
+    this.maxProgress = this.sequence.length;
   }
 
   int compute(String compare) {

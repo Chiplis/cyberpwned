@@ -42,7 +42,7 @@ Future<void> main() async {
 
 class MyApp extends StatefulWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  _MyAppState createState() =>_MyAppState();
 }
 
 class CyberpunkButtonPainter extends CustomPainter {
@@ -91,7 +91,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     _matrix = CellGroup([
-      ["55", "BD", "55", "1C", "1C", "55", "55"],
+      ["55", "BD", "55", "1C", "1C", "55", "?"],
       ["7A", "7A", "1C", "1C", "1C", "1C", "E9"],
       ["1C", "E9", "E9", "55", "1C", "FF", "E9"],
       ["BD", "55", "55", "1C", "55", "1C", "1C"],
@@ -105,6 +105,7 @@ class _MyAppState extends State<MyApp> {
       ["E9", "1C"],
       ["55", "55", "55"],
     ], _sequencesState);
+    verifyValidMatrix();
     super.initState();
   }
 
@@ -143,11 +144,13 @@ class _MyAppState extends State<MyApp> {
       final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFilePath(file.path);
       final VisionText visionText = await _textRecognizer.processImage(visionImage);
       // Ignore any blocks containing anything other than valid hexadecimal digits
-      SequenceGroup allSequences = SequenceGroup(visionText.blocks
-          .toList()
-          .where((block) => !block.text.split(" ").any((possibleHex) => !_validHex.contains(possibleHex)))
-          .map((block) => SequenceCapture.fromBlock(block))
-          .toList(), square);
+      SequenceGroup allSequences = SequenceGroup(
+          visionText.blocks
+              .toList()
+              .where((block) => block.text.split(" ").any((possibleHex) => _validHex.contains(possibleHex)))
+              .map((block) => SequenceCapture.fromBlock(block))
+              .toList(),
+          square);
 
       result.addAll(allSequences.get().map((seqGroup) => seqGroup.sequence));
 
@@ -160,6 +163,15 @@ class _MyAppState extends State<MyApp> {
       _error["exception"] = e.message;
     }
     _processing[entity] = null;
+    verifyValidMatrix();
+  }
+
+  void verifyValidMatrix() {
+    if (_matrix.any((row) => row.any((e) => !_validHex.contains(e)))) {
+      _error["INCOMPLETE MATRIX"] = "Some matrix elements couldn't be parsed. Any matrix value can be tapped and changed. You can also re-scan the matrix.";
+    } else {
+      _error["INCOMPLETE MATRIX"] = "";
+    }
     setState(() {});
   }
 
@@ -259,7 +271,7 @@ class _MyAppState extends State<MyApp> {
                                             padding: EdgeInsets.all(0),
                                             // Color cell depending on whether the coordinate is part of the optimal path
                                             // If the coordinate is part of the optimal path, show when it should be visited instead of displaying its value
-                                            child: DisplayCell.forMatrix(row.key, column.key, _bufferSize, _sequences, _solution, _matrix).render())))
+                                            child: matrixCell(row.key, column.key, _bufferSize, _solution, _matrix.get(row.key, column.key)))))
                                     .toList()))
                             .toList())),
                 SizedBox(height: 8),
@@ -281,22 +293,24 @@ class _MyAppState extends State<MyApp> {
                             .map((sequence) => TableRow(
                                 children: ([MapEntry(-1, "")] + (sequence.value.asMap().entries.toList()))
                                     .map((elm) => elm.key >= 0
-                                        ? Padding(padding: EdgeInsets.symmetric(vertical: 2), child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, CellGroup([sequence.value], _sequencesState), _solution, _matrix).render())
-                                        : Padding(padding: EdgeInsets.symmetric(horizontal: 2), child: DisplayCell.forToggle(null, null, _bufferSize, null, _solution, null).render(
-                                            _sequencesState[sequence.value.where((e) => e != "").toList().toString()] == null ||
-                                                    _sequencesState[sequence.value.where((e) => e != "").toList().toString()]
-                                                ? "✓"
-                                                : "✗",
-                                            _sequencesState[sequence.value.where((e) => e != "").toList().toString()] == null ||
-                                                    _sequencesState[sequence.value.where((e) => e != "").toList().toString()]
-                                                ? AppColor.getInteractable()
-                                                : AppColor.getDeactivated(), () async {
-                                            _solutionFound = false;
-                                            var key = sequence.value.where((e) => e != "").toList().toString();
-                                            var enabled = _sequencesState[key];
-                                            _sequencesState[key] = !(enabled == null || enabled);
-                                            setState(() {});
-                                          }, 23)))
+                                        ? Padding(
+                                            padding: EdgeInsets.symmetric(vertical: 2),
+                                            child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize,
+                                                    CellGroup([sequence.value], _sequencesState), _solution, _matrix)
+                                                .render())
+                                        : Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 2),
+                                            child: DisplayCell.forToggle(null, null, _bufferSize, null, _solution, null).render(
+                                                _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ?? true ? "✓" : "✗",
+                                                _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ?? true
+                                                    ? AppColor.getInteractable()
+                                                    : AppColor.getDeactivated(), () async {
+                                              _solutionFound = false;
+                                              var key = sequence.value.where((e) => e != "").toList().toString();
+                                              var enabled = _sequencesState[key];
+                                              _sequencesState[key] = !(enabled == null || enabled);
+                                              setState(() {});
+                                            })))
                                     .toList()))
                             .toList())),
                 SizedBox(height: 8),
@@ -350,4 +364,54 @@ class _MyAppState extends State<MyApp> {
       _error["CALCULATION ERROR"] = error.toString();
     });
   }
+
+  Color _colorForCell(int bufferSize, TraversedPath solution, int x, int y, String dropdownValue) {
+    if (dropdownValue == "?") return AppColor.getInteractable();
+    if (bufferSize == null) return AppColor.getDeactivated();
+    return (_isPartOfSolution(bufferSize, solution, x, y, dropdownValue) != null) ? AppColor.getSuccess() : (_solutionFound ? AppColor.getFailure() : AppColor.getNeutral());
+  }
+
+  String _isPartOfSolution(int bufferSize, TraversedPath solution, int x, int y, String dropdownValue) {
+    if (!_solutionFound) return null;
+    if (bufferSize == null) return null;
+    if (solution.coords.length > bufferSize) return null;
+    for (int i = 0; i < solution.coords.length; i++) {
+      if (solution.coords[i][0] == x && solution.coords[i][1] == y) {
+        return (i + 1).toString();
+      }
+    }
+    return null;
+  }
+
+  List<String> _items = ['1C', '55', 'FF', '7A', 'BD', 'E9', '?'];
+  Widget matrixCell(int x, int y, int bufferSize, TraversedPath solution, String dropdownValue) {
+    TextStyle style = TextStyle(
+        color: _colorForCell(bufferSize, solution, x, y, dropdownValue),
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+        fontFamily: GoogleFonts.rajdhani().fontFamily);
+    return AnimatedContainer(duration: Duration(milliseconds: 1000), child: SizedBox(height: 27, child: DecoratedBox(
+        decoration: BoxDecoration(color: _colorForCell(bufferSize, solution, x, y, dropdownValue).withOpacity(0), border: Border.all(color: _colorForCell(bufferSize, solution, x, y, dropdownValue), width: 1)),
+        child: DropdownButtonHideUnderline(child: DropdownButton(
+          value: _isPartOfSolution(bufferSize, solution, x, y, dropdownValue) ?? dropdownValue,
+          style: style,
+          isExpanded: true,
+          iconSize: 0,
+          onChanged: (String newValue) {
+            dropdownValue = newValue;
+            if (_items.contains(newValue)) {
+              _matrix.set(x, y, newValue);
+            }
+            verifyValidMatrix();
+            },
+          items: (_isPartOfSolution(bufferSize, solution, x, y, dropdownValue) != null ? [_isPartOfSolution(bufferSize, solution, x, y, dropdownValue)] : _items).map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Container(alignment: Alignment.center, child: Text(value, style: style, textAlign: TextAlign.center)),
+            );
+          }).toList(),
+        ))
+    )));
+  }
+
 }
