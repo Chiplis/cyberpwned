@@ -38,7 +38,7 @@ class SequenceScore {
     }
 
     int oldProgress = progress;
-    progress += sequence[progress] == compare ? _increase() : _decrease();
+    progress += sequence[progress] == compare ? _increase() : _decrease(compare);
     score += (progress - oldProgress) * pow(10, rewardLevel);
     bufferSize--;
     return score;
@@ -71,9 +71,12 @@ class SequenceScore {
 
   // When an incorrect value is matched against the current head of the sequence, the score is decreased by 1 (can't go below 0)
   // If it's not possible to complete the sequence, set the score to a negative value depending on the reward
-  int _decrease() {
+  int _decrease(String compare) {
     if (_completed()) return 0;
-    return progress > 0 ? -1 : 0;
+    if (progress == 0) return 0;
+    int i = progress;
+    while (i != 0 && sequence[i--] == compare) {}
+    return -progress + i;
   }
 
   // A sequence is considered completed if no further progress is possible or necessary
