@@ -29,6 +29,14 @@ class SequenceScore {
       return score;
     }
 
+    if (progress > 0 && sequence[progress] != compare && sequence[progress - 1] == compare) {
+      bufferSize--;
+      if (bufferSize < maxProgress - progress) {
+        score = minScore();
+      }
+      return score;
+    }
+
     int oldProgress = progress;
     progress += sequence[progress] == compare ? _increase() : _decrease();
     score += (progress - oldProgress) * pow(10, rewardLevel);
@@ -78,7 +86,7 @@ class PathScore {
   int score;
   TraversedPath path;
   int bufferSize;
-  List<SequenceScore> sequenceScores = [];
+  List<SequenceScore> sequenceScores = List<SequenceScore>();
   CellGroup matrix;
   static Map<TraversedPath, PathScore> previousScores = {};
 
