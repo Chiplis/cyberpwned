@@ -29,13 +29,22 @@ class SequenceGroup {
 
       List<SequenceCapture> result = [];
       for (int i = 0; i < group.length; i++) {
-        if (sortedGroup.length > 0 && ((sortedGroup[sortedGroup.length - 1].top - group[i].top).abs() > 70)) {
-          SequenceCapture lastCapture = sortedGroup[sortedGroup.length - 1];
+        SequenceCapture lastCapture = sortedGroup.length == 0 ? null : sortedGroup[sortedGroup.length - 1];
+        if (sortedGroup.length > 0 && ((lastCapture.top - group[i].top).abs() > 70)) {
           lastCapture.sequence += List.filled(max(0, size - sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b)), "?");
           if (lastCapture.sequence.where((element) => element == "?").length <= 3) {
             result.add(sortedGroup.reduce((a, b) => a + b));
           }
           sortedGroup.clear();
+        } else if (sortedGroup.length > 0 && ((lastCapture.right - group[i].left).abs() > 70)) {
+          if ((lastCapture.right - group[i].left) >= 70) {
+            lastCapture.sequence.insertAll(0, group[i].sequence);
+          } else if ((lastCapture.right - group[i].left) <= -70) {
+            lastCapture.sequence += group[i].sequence;
+          }
+          lastCapture.left = min(lastCapture.left, group[i].left);
+          lastCapture.right = max(lastCapture.right, group[i].right);
+          continue;
         }
         sortedGroup.add(group[i]);
         if (sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b) == size) {
