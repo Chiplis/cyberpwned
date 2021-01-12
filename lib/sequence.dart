@@ -124,6 +124,6 @@ class SequenceCapture {
         max(right, other.right),
         max(bottom, other.bottom),
         min(top, other.top),
-        left <= other.left ? sequence + other.sequence : other.sequence + sequence);
+        left < other.left ? sequence + other.sequence : left > other.left ? other.sequence + sequence : right > other.right ? other.sequence + sequence : sequence + other.sequence);
   }
 }
