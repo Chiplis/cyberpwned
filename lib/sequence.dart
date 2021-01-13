@@ -32,22 +32,12 @@ class SequenceGroup {
         SequenceCapture lastCapture = sortedGroup.length == 0 ? null : sortedGroup[sortedGroup.length - 1];
         if (sortedGroup.length > 0 && ((lastCapture.top - group[i].top).abs() > 70)) {
           lastCapture.sequence += List.filled(max(0, size - sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b)), "?");
-          if (lastCapture.sequence.where((element) => element == "?").length <= 3) {
-            result.add(sortedGroup.reduce((a, b) => a + b));
-          }
+          result.add(sortedGroup.reduce((a, b) => a + b));
           sortedGroup.clear();
-        } else if (sortedGroup.length > 0 && ((lastCapture.right - group[i].left).abs() > 70)) {
-          if ((lastCapture.right - group[i].left) >= 70) {
-            lastCapture.sequence.insertAll(0, group[i].sequence);
-          } else if ((lastCapture.right - group[i].left) <= -70) {
-            lastCapture.sequence += group[i].sequence;
-          }
-          lastCapture.left = min(lastCapture.left, group[i].left);
-          lastCapture.right = max(lastCapture.right, group[i].right);
-          continue;
         }
         sortedGroup.add(group[i]);
         if (sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b) == size) {
+          sortedGroup.sort((a, b) => a.left.compareTo(b.left));
           result.add(sortedGroup.reduce((a, b) => a + b));
           sortedGroup.clear();
         }
@@ -115,6 +105,10 @@ class SequenceCapture {
     top = block.boundingBox.top;
     bottom = block.boundingBox.bottom;
     sequence = block.text.split(" ").where((element) => _validHex.contains(element)).toList();
+  }
+
+  double length() {
+    return (right - left) / sequence.length;
   }
 
   SequenceCapture operator +(SequenceCapture other) {
