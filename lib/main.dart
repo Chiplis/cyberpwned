@@ -14,7 +14,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 
 /// If the current platform is desktop, override the default platform to
 /// a supported platform (iOS for macOS, Android for Linux and Windows).
@@ -151,6 +151,8 @@ class _MyAppState extends State<MyApp> {
               .map((block) => SequenceCapture.fromBlock(block))
               .toList(),
           square);
+
+      await File(file.path).delete();
 
       result.addAll(allSequences.get().map((seqGroup) => seqGroup.sequence));
 
