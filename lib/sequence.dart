@@ -18,6 +18,8 @@ class SequenceGroup {
     if (square) {
 
       int size = group.map((g) => g.sequence.length).reduce(max);
+      group.sort((a, b) => -(a.sequence.length.compareTo(b.sequence.length)));
+      group = group.sublist(0, size);
       group.sort((a, b) => -(a.top.compareTo(b.top)));
 
       List<SequenceCapture> sortedGroup = [];
@@ -25,7 +27,7 @@ class SequenceGroup {
       for (int i = 0; i < group.length; i++) {
         sortedGroup.sort((a, b) => a.left.compareTo(b.left));
         SequenceCapture lastCapture = sortedGroup.length == 0 ? null : sortedGroup.last;
-        if (sortedGroup.length > 0 && ((lastCapture.top - group[i].top).abs() > 150)) {
+        if (sortedGroup.length > 0 && ((lastCapture.top - group[i].top).abs() > (lastCapture.bottom - lastCapture.top) * 0.9)) {
           SequenceCapture capture = sortedGroup.reduce((a, b) => a + b);
           double minLeft = capture.left;
           double left = result.length > 0 ? result.last.left : minLeft;
@@ -53,7 +55,7 @@ class SequenceGroup {
         SequenceCapture capture = sortedGroup.reduce((a, b) => a + b);
         double minLeft = capture.left;
         double left = result.length > 0 ? result.last.left : minLeft;
-        if (minLeft - left >= capture.length() / 1.25) {
+        if (minLeft - left >= capture.length()) {
           capture.sequence.insertAll(0, List.filled(max(0, size - capture.sequence.length), "?"));
         } else {
           capture.sequence += List.filled(max(0, size - capture.sequence.length), "?");
@@ -126,9 +128,9 @@ class SequenceCapture {
 
   SequenceCapture operator +(SequenceCapture other) {
     if (this == other || other == null) return this;
-    if ((other.left - left).abs() < 100 && (other.right - right).abs() < 100) return this;
-    double len = min(length(), other.length());
-    if (other.left >= right + len){
+    if ((other.left - left).abs() < other.length() && (other.right - right).abs() < other.length()) return this;
+    double len = (length() + other.length()) / 2;
+    if (other.left >= right + len / 1.1){
       int i = 0;
       while (other.left >= right + i * len) {
         i++;
@@ -138,7 +140,7 @@ class SequenceCapture {
           max(right, other.right),
           max(bottom, other.bottom),
           min(top, other.top),
-          sequence + List.filled(i - 1, "?") + other.sequence
+          sequence + List.filled(max(0, i - 1), "?") + other.sequence
       );
     }
     return SequenceCapture(
