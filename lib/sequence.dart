@@ -17,43 +17,53 @@ class SequenceGroup {
     if (group.length == 0) throw Exception("No elements were parsed, please try again.");
     if (square) {
 
-      group.sort((a, b) => -(a.sequence.length.compareTo(b.sequence.length)));
-      int size = group[1].sequence.length;
-      group = group.sublist(0, size);
+      int size = group.map((g) => g.sequence.length).reduce(max);
       group.sort((a, b) => -(a.top.compareTo(b.top)));
 
       List<SequenceCapture> sortedGroup = [];
       List<SequenceCapture> result = [];
       for (int i = 0; i < group.length; i++) {
+        sortedGroup.sort((a, b) => a.left.compareTo(b.left));
         SequenceCapture lastCapture = sortedGroup.length == 0 ? null : sortedGroup.last;
-        if (sortedGroup.length > 0 && ((lastCapture.top - group[i].top).abs() > lastCapture.length() / 1.25)) {
-          double minLeft = sortedGroup.map((e) => e.left).reduce(min);
+        if (sortedGroup.length > 0 && ((lastCapture.top - group[i].top).abs() > 150)) {
+          SequenceCapture capture = sortedGroup.reduce((a, b) => a + b);
+          double minLeft = capture.left;
           double left = result.length > 0 ? result.last.left : minLeft;
-          if ((minLeft - left) >= 40) {
-            sortedGroup.first.sequence.insertAll(0, List.filled(max(0, size - sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b)), "?"));
+          if (minLeft - left >= (result.length > 0 ? result.last : lastCapture).length()) {
+            capture.sequence.insertAll(0, List.filled(max(0, size - capture.sequence.length), "?"));
           } else {
-            lastCapture.sequence += List.filled(max(0, size - sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b)), "?");
+            capture.sequence += List.filled(max(0, size - capture.sequence.length), "?");
           }
-          result.add(sortedGroup.reduce((a, b) => a + b));
+          capture.sequence = capture.sequence.sublist(0, size);
+          result.add(capture);
           sortedGroup.clear();
         }
         sortedGroup.add(group[i]);
-        if (sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b) == size) {
+        if (sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b) >= size) {
           sortedGroup.sort((a, b) => a.left.compareTo(b.left));
-          result.add(sortedGroup.reduce((a, b) => a + b));
+          SequenceCapture capture = sortedGroup.reduce((a, b) => a + b);
+          capture.sequence = capture.sequence.sublist(0, size);
+          result.add(capture);
           sortedGroup.clear();
         }
       }
 
       if (sortedGroup.length != 0) {
         sortedGroup.sort((a, b) => a.left.compareTo(b.left));
-        SequenceCapture lastCapture = sortedGroup[sortedGroup.length - 1];
-        lastCapture.sequence += List.filled(max(0, size - sortedGroup.map((g) => g.sequence.length).fold(0, (a, b) => a + b)), "?");
-        result.add(sortedGroup.reduce((a, b) => a + b));
+        SequenceCapture capture = sortedGroup.reduce((a, b) => a + b);
+        double minLeft = capture.left;
+        double left = result.length > 0 ? result.last.left : minLeft;
+        if (minLeft - left >= capture.length() / 1.25) {
+          capture.sequence.insertAll(0, List.filled(max(0, size - capture.sequence.length), "?"));
+        } else {
+          capture.sequence += List.filled(max(0, size - capture.sequence.length), "?");
+        }
+        capture.sequence = capture.sequence.sublist(0, size);
+        result.insert(0, capture);
       }
 
       group.clear();
-      group.addAll(result);
+      group.addAll(result.sublist(0, size));
       return;
     }
 
@@ -116,29 +126,19 @@ class SequenceCapture {
 
   SequenceCapture operator +(SequenceCapture other) {
     if (this == other || other == null) return this;
-    if (other.left >= left - length() / 1.75 && other.right >= right + length() / 1.75){
+    if ((other.left - left).abs() < 100 && (other.right - right).abs() < 100) return this;
+    double len = min(length(), other.length());
+    if (other.left >= right + len){
       int i = 0;
-      while (i * other.length() + other.left < right) {
+      while (other.left >= right + i * len) {
         i++;
       }
       return SequenceCapture(
-        left,
-        other.right,
-        bottom,
-        top,
-        sequence + other.sequence.sublist(i)
-      );
-    } else if (other.left <= left - length() / 1.75 && other.right <= right - length() / 1.75) {
-      int i = 0;
-      while (i * other.length() + other.left < left) {
-        i++;
-      }
-      return SequenceCapture(
-          left,
-          other.right,
-          bottom,
-          top,
-          other.sequence.sublist(0, i) + sequence
+          min(left, other.left),
+          max(right, other.right),
+          max(bottom, other.bottom),
+          min(top, other.top),
+          sequence + List.filled(i - 1, "?") + other.sequence
       );
     }
     return SequenceCapture(
