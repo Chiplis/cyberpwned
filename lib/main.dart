@@ -226,13 +226,14 @@ class _MyAppState extends State<MyApp> {
                             focusColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
                             fillColor: (_bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral()).withOpacity(0.3),
                             enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3),
+                              borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 2),
                             ),
                             focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 3)),
+                                borderSide: BorderSide(color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(), width: 2)),
                             labelText: "BUFFER SIZE",
                             labelStyle: TextStyle(
                               fontSize: 20,
+                              height: 1.75,
                               fontWeight: FontWeight.bold,
                               color: _bufferSize == null ? AppColor.getInteractable() : AppColor.getNeutral(),
                               fontFamily: GoogleFonts.rajdhani().fontFamily,
