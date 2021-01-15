@@ -148,7 +148,7 @@ class _MyAppState extends State<MyApp> {
           visionText.blocks
               .toList()
               .where((block) => block.text.split(" ").any((possibleHex) => _validHex.contains(possibleHex)))
-              .map((block) => SequenceCapture.fromBlock(block))
+              .map((block) => SequenceCapture.fromBlock(block, square))
               .toList(),
           square);
 
