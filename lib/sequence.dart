@@ -19,7 +19,7 @@ class SequenceGroup {
 
     int size = group.map((g) => g.sequence.length).reduce(max);
     group.sort((a, b) => -(a.sequence.length.compareTo(b.sequence.length)));
-    group = group.sublist(0, size);
+    group = square ? group.sublist(0, size) : group;
     group.sort((a, b) => -(a.top.compareTo(b.top)));
 
     List<SequenceCapture> sortedGroup = [];
@@ -69,7 +69,7 @@ class SequenceGroup {
     }
 
     group.clear();
-    group.addAll(result.sublist(0, min(result.length, size)));
+    group.addAll(square ? result.sublist(0, min(result.length, size)) : result);
   }
 
   List<SequenceCapture> get() {
