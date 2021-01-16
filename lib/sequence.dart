@@ -69,7 +69,7 @@ class SequenceGroup {
     }
 
     group.clear();
-    group.addAll(result.sublist(0, size));
+    group.addAll(result.sublist(0, min(result.length, size)));
   }
 
   List<SequenceCapture> get() {
