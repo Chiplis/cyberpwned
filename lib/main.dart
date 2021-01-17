@@ -13,8 +13,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:io' show File, Platform;
+
+import 'package:url_launcher/url_launcher.dart';
 
 /// If the current platform is desktop, override the default platform to
 /// a supported platform (iOS for macOS, Android for Linux and Windows).
@@ -79,7 +82,7 @@ class CyberpunkButtonPainter extends CustomPainter {
 }
 
 class _MyAppState extends State<MyApp> {
-  Map<String, String> _error = {"MISSING BUFFER SIZE": "Specify buffer size before calculating path."};
+  Map<String, String> _error = {};
 
   CellGroup _matrix;
   CellGroup _sequences;
@@ -106,12 +109,23 @@ class _MyAppState extends State<MyApp> {
       ["55", "55", "55"],
     ], _sequencesState);
     verifyValidMatrix();
+    loadBufferSize();
     super.initState();
+  }
+
+  void loadBufferSize() async {
+    _bufferSize = (await SharedPreferences.getInstance()).getInt("bufferSize");
+    _bufferSizeController = TextEditingController(text: _bufferSize.toString());
+    _error["MISSING BUFFER SIZE"] = _bufferSize == null ? "Specify buffer size before calculating path." : "";
+    setState(() {});
   }
 
   final TextRecognizer _textRecognizer = FirebaseVision.instance.textRecognizer();
 
   int _bufferSize;
+  TextEditingController _bufferSizeController;
+
+
 
   final List<String> _validHex = ["1C", "FF", "E9", "BD", "55", "7A"];
 
@@ -177,6 +191,16 @@ class _MyAppState extends State<MyApp> {
     setState(() {});
   }
 
+  _launchURL() async {
+    const url = 'https://www.buymeacoffee.com/nicolas.siplis';
+    if (await canLaunch(url)) {
+      await launch(url, forceWebView: true, enableJavaScript: true);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
+
   Map<String, String> _processing = {};
 
   RawMaterialButton _parseButton(String text, String entity, Color strokeColor, Future<void> Function() onPressed) {
@@ -218,6 +242,7 @@ class _MyAppState extends State<MyApp> {
                         textAlignVertical: TextAlignVertical.center,
                         maxLines: 1,
                         textAlign: TextAlign.center,
+                        controller: _bufferSizeController,
                         style: TextStyle(
                             color: AppColor.getNeutral(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
                         decoration: new InputDecoration(
@@ -247,6 +272,7 @@ class _MyAppState extends State<MyApp> {
                           if (newBuffer != _bufferSize) {
                             _solutionFound = false;
                             _bufferSize = newBuffer;
+                            (await SharedPreferences.getInstance()).setInt("bufferSize", newBuffer);
                             _solution = TraversedPath([]);
                           }
                           setState(() {});
@@ -337,6 +363,11 @@ class _MyAppState extends State<MyApp> {
                         style: TextStyle(
                             color: AppColor.getFailure(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
                         textAlign: TextAlign.justify)),
+                Container(margin: EdgeInsets.fromLTRB(300, 0, 0, 0), child: _parseButton(
+                    "C0FF33",
+                    "Donate",
+                    AppColor.getSuccess(),
+                        () => _launchURL())),
               ],
             ),
           )),
@@ -346,7 +377,6 @@ class _MyAppState extends State<MyApp> {
   int _reviewCounter = 0;
 
   void _computeSolution(String processingMsg, String processingKey) {
-    setState(() {});
     _processing[processingKey] = processingMsg;
     setState(() {});
     compute(Solution.calculateSolution, {
@@ -393,6 +423,7 @@ class _MyAppState extends State<MyApp> {
         fontSize: 22,
         fontWeight: FontWeight.bold,
         fontFamily: GoogleFonts.rajdhani().fontFamily);
+    String isPart = _isPartOfSolution(bufferSize, solution, x, y, dropdownValue);
     return AnimatedContainer(duration: Duration(milliseconds: 1000), child: SizedBox(height: 27, child: DecoratedBox(
         decoration: BoxDecoration(color: _colorForCell(bufferSize, solution, x, y, dropdownValue).withOpacity(0), border: Border.all(color: _colorForCell(bufferSize, solution, x, y, dropdownValue), width: 1)),
         child: DropdownButtonHideUnderline(child: DropdownButton(
@@ -407,10 +438,10 @@ class _MyAppState extends State<MyApp> {
             }
             verifyValidMatrix();
             },
-          items: (_isPartOfSolution(bufferSize, solution, x, y, dropdownValue) != null ? [_isPartOfSolution(bufferSize, solution, x, y, dropdownValue)] : _items).map((String value) {
+          items: (isPart != null ? [isPart] : _items).map((String value) {
             return DropdownMenuItem<String>(
               value: value,
-              child: Container(alignment: Alignment.center, child: Text(value, style: style, textAlign: TextAlign.center)),
+              child: Container(alignment: Alignment.center, child: Text("${isPart != null ? _matrix.get(x, y) : value}${isPart == null ? '' : '/$isPart'}", style: style, textAlign: TextAlign.center)),
             );
           }).toList(),
         ))
