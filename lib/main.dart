@@ -115,7 +115,7 @@ class _MyAppState extends State<MyApp> {
 
   void loadBufferSize() async {
     _bufferSize = (await SharedPreferences.getInstance()).getInt("bufferSize");
-    _bufferSizeController = TextEditingController(text: _bufferSize.toString());
+    _bufferSizeController = TextEditingController(text: _bufferSize ?? "");
     _error["MISSING BUFFER SIZE"] = _bufferSize == null ? "Specify buffer size before calculating path." : "";
     setState(() {});
   }
@@ -303,12 +303,10 @@ class _MyAppState extends State<MyApp> {
                                             child: matrixCell(row.key, column.key, _bufferSize, _solution, _matrix.get(row.key, column.key)))))
                                     .toList()))
                             .toList())),
-                SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: _parseButton('SCAN SEQUENCES', "Sequences", _sequences.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
                         () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false))),
-                SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Table(
@@ -344,7 +342,11 @@ class _MyAppState extends State<MyApp> {
                             .toList())),
                 Padding(
                     padding: EdgeInsets.all(0),
-                    child: _parseButton(
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                      Expanded(flex: 10, child: _parseButton(
                         _processing["path"] ??
                             (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
                         "Path",
@@ -355,18 +357,19 @@ class _MyAppState extends State<MyApp> {
                                 : _solutionFound
                                     ? AppColor.getSuccess()
                                     : AppColor.getNeutral(),
-                        () => _calculatePath())),
+                        () => _calculatePath()))
+                    ])),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Text(Solution.allErrors(_error),
                         style: TextStyle(
-                            color: AppColor.getFailure(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
+                            color: AppColor.getFailure(), fontSize: Solution.allErrors(_error).isEmpty ? 0 : 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
                         textAlign: TextAlign.justify)),
-                Container(margin: EdgeInsets.fromLTRB(300, 0, 0, 0), child: _parseButton(
-                    "C0FF33",
+                _parseButton(
+                    "☕",
                     "Donate",
-                    AppColor.getSuccess(),
-                        () => _launchURL())),
+                    Colors.transparent,
+                        () => _launchURL())
               ],
             ),
           )),
