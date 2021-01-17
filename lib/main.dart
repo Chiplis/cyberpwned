@@ -342,9 +342,8 @@ class _MyAppState extends State<MyApp> {
                                             })))
                                     .toList()))
                             .toList())),
-                SizedBox(height: 8),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    padding: EdgeInsets.all(0),
                     child: _parseButton(
                         _processing["path"] ??
                             (_error.keys.where((key) => _error[key] != "").map((key) => key + " ↓").toList() + ["CALCULATE PATH"])[0],
@@ -358,7 +357,7 @@ class _MyAppState extends State<MyApp> {
                                     : AppColor.getNeutral(),
                         () => _calculatePath())),
                 Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    padding: EdgeInsets.all(0),
                     child: Text(Solution.allErrors(_error),
                         style: TextStyle(
                             color: AppColor.getFailure(), fontSize: 20, fontWeight: FontWeight.bold, fontFamily: GoogleFonts.rajdhani().fontFamily),
