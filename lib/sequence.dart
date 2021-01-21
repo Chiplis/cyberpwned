@@ -9,46 +9,42 @@ class SequenceGroup {
   List<SequenceCapture> _group = [];
 
   final bool square;
-
+  final bool both;
   bool ordered = false;
 
-  SequenceGroup(this._group, this.square);
+  SequenceGroup(this._group, this.square, this.both);
 
-  void _complete(List<SequenceCapture> partial, int size, minLeft, maxRight) {
+  void _complete(List<SequenceCapture> partial, int size) {
     if (!square) return;
     if (partial.map((s) => s.sequence.length).fold(0, (a, b) => a + b) == size) return;
+    if (partial.length < 2) return;
+    partial.sort((a, b) => a.left.compareTo(b.left));
+    partial.add(SequenceCapture(partial.last.right + 1, partial.last.right + 1 + partial.last.length(), partial.last.bottom, partial.last.top, ["?"], square));
+    if (partial.length == size) return;
+    partial.insert(0, SequenceCapture(partial.first.left - partial.first.length(), partial.first.left - 1, partial.first.bottom, partial.first.top, ["?"], square));
+    _complete(partial, size);
+  }
 
-    partial.sort((p, q) => -(p.sequence.length.compareTo(q.sequence.length)));
-    double len = partial.first.length();
-    partial.sort((p, q) => p.left.compareTo(q.left));
-    if (partial.first.left > minLeft + len * 0.85) {
-      while (partial.first.left > minLeft) {
-        partial.insert(0, SequenceCapture(partial.first.left - len, partial.first.left - 1, partial.first.bottom, partial.first.top, ["?"], square));
+  void _divide(square) {
+    _group.sort((a, b) => -(a.right.compareTo(b.right)));
+    int idx;
+    double maxDiff = 0;
+    for (int i = 1; i < _group.length; i++) {
+      double diff = (_group[i].right - _group[i - 1].right).abs();
+      if (diff > maxDiff) {
+        idx = i;
+        maxDiff = diff;
       }
     }
-    if (partial.last.right < maxRight - len * 0.85) {
-      while (partial.last.right < maxRight) {
-        partial.add(SequenceCapture(partial.last.right + 1, partial.last.right + len, partial.last.bottom, partial.last.top, ["?"], square));
-      }
-    }
-    var idxs = [];
-    for (int i = 1; i < partial.length; i++) {
-      if (partial[i].left - partial[i - 1].right > len * 1.5) {
-        idxs.add(i - 1);
-      }
-    }
-    for (int i = 0; i < idxs.length; i++) {
-      var idx = idxs[i];
-      partial.insert(
-          i + idx, SequenceCapture(partial[idx].right + 1, partial[idx].right + len, partial[idx].bottom, partial[idx].top, ["?"], square));
-    }
-    return;
+    _group = square ? _group.sublist(idx) : _group.sublist(0, idx);
   }
 
   void _order() {
     if (_group.length == 0) throw Exception("No elements were parsed, please try again.");
 
-    deduplicate();
+    _deduplicate(square);
+
+    if (both) _divide(square);
 
     double minLeft = _group.map((g) => g.left).reduce(min);
     double maxRight = _group.map((g) => g.right).reduce(max);
@@ -66,14 +62,14 @@ class SequenceGroup {
         result.add(partial.reduce((a, b) => a + b));
         partial.clear();
       } else if (partial.isNotEmpty && partial.last.left > current.left && partial.last.top + partial.last.height() * 1.25 < current.top) {
-        _complete(partial, size, minLeft, maxRight);
+        _complete(partial, size);
         result.add(partial.reduce((a, b) => a + b));
         partial.clear();
       }
       partial.add(current);
     }
     if (partial.isNotEmpty) {
-      _complete(partial, size, minLeft, maxRight);
+      _complete(partial, size);
       result.insert(0, partial.reduce((a, b) => a + b));
     }
     _group.clear();
@@ -89,7 +85,7 @@ class SequenceGroup {
     while (keypoints.length > 0) {
       keypoints.sort((p, q) => (p.left + p.top).compareTo(q.left + q.top));
       var a = Vector([keypoints[0].left, keypoints[0].top, 0]);
-      keypoints.sort((p, q) => (p.left - p.top).compareTo(q.left - q.top));
+      keypoints.sort((p, q) => (p.left/p.top).compareTo(q.left/q.top));
       var b = Vector([keypoints.last.left, keypoints.last.top, 0]);
       List<SequenceCapture> remainingPoints = [];
 
@@ -98,7 +94,7 @@ class SequenceGroup {
         var p = Vector([k.left, k.top, 0]);
         var d = sqrt((k.right - k.left) * (k.bottom - k.top));
         var dist = ((p - a).cross(b - a)).euclideanNorm() / b.euclideanNorm();
-        if (d / 2 + hold > dist) {
+        if (d / (square ? 2 : 4) + hold > dist) {
           rowPoints.add(k);
           rowPoints.sort((a, b) => a.left.compareTo(b.left));
         } else {
@@ -106,7 +102,7 @@ class SequenceGroup {
         }
       }
       if ((square && rowPoints.length != size) || (!square && rowPoints.length == 0)) {
-        hold += 50;
+        hold += 25;
       } else {
         points.addAll(rowPoints);
         rowPoints.clear();
@@ -121,15 +117,15 @@ class SequenceGroup {
     _group.addAll(points);
   }
 
-  void deduplicate() {
+  void _deduplicate(bool square) {
     List<SequenceCapture> result = [];
     for (SequenceCapture a in _group) {
       var found = false;
       for (SequenceCapture b in result) {
-        if ((a.right - b.right).abs() + (a.top - b.top).abs() < 100 ||
-            (a.bottom - b.bottom).abs() + (a.left - b.left).abs() < 100 ||
-            (a.right - b.right).abs() + (a.bottom - b.bottom).abs() < 100 ||
-            (a.left - b.left).abs() + (a.top - b.top).abs() < 100) {
+        if ((a.right - b.right).abs() + (a.top - b.top).abs() < (square ? 75 : 50) ||
+            (a.bottom - b.bottom).abs() + (a.left - b.left).abs() < (square ? 75 : 50) ||
+            (a.right - b.right).abs() + (a.bottom - b.bottom).abs() < (square ? 75 : 50) ||
+            (a.left - b.left).abs() + (a.top - b.top).abs() < (square ? 75 : 50)) {
           found = true;
           break;
         }

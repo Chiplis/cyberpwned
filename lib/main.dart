@@ -67,7 +67,7 @@ class CyberpunkButtonPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    canvas.drawPath(getTrianglePath(size.width, size.height), fillPaint);
+    if (this.paintingStyle == PaintingStyle.fill) canvas.drawPath(getTrianglePath(size.width, size.height), fillPaint);
     canvas.drawPath(getTrianglePath(size.width, size.height), strokePaint);
   }
 
@@ -93,21 +93,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState() {
-    _matrix = CellGroup([
-      ["55", "BD", "55", "1C", "1C", "55", "?"],
-      ["7A", "7A", "1C", "1C", "1C", "1C", "E9"],
-      ["1C", "E9", "E9", "55", "1C", "FF", "E9"],
-      ["BD", "55", "55", "1C", "55", "1C", "1C"],
-      ["1C", "55", "E9", "BD", "55", "55", "7A"],
-      ["E9", "1C", "BD", "FF", "E9", "FF", "7A"],
-      ["E9", "7A", "1C", "55", "E9", "55", "1C"],
-    ], _sequencesState);
+    _matrix = CellGroup([], _sequencesState);
 
-    _sequences = CellGroup([
-      ["55", "E9", "E9"],
-      ["E9", "1C"],
-      ["55", "55", "55"],
-    ], _sequencesState);
+    _sequences = CellGroup([], _sequencesState);
     verifyValidMatrix();
     loadBufferSize();
     super.initState();
@@ -141,7 +129,7 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> _parseGroup(String entity, String processingMsg, CellGroup result, bool square) async {
+  Future<void> _parseGroup(String entity, String processingMsg, CellGroup result, bool square, bool both) async {
     try {
       var file = await ImagePicker().getImage(source: ImageSource.camera);
       if (file == null) {
@@ -149,11 +137,12 @@ class _MyAppState extends State<MyApp> {
       }
 
       _processing[entity] = processingMsg;
+      _error["BOTH PARSE ERROR"] = "";
       _error["${entity.toUpperCase()} PARSE ERROR"] = "";
       _error["exception"] = "";
       _solution = TraversedPath([]);
       _solutionFound = false;
-      result.clear();
+      if (!both) result.clear();
       _sequencesState.clear();
       setState(() {});
 
@@ -161,12 +150,18 @@ class _MyAppState extends State<MyApp> {
       final VisionText visionText = await _textRecognizer.processImage(visionImage);
       List<SequenceCapture> captures = [];
       visionText.blocks.where((block) => block.text.split(" ").any((possibleHex) => _validHex.contains(possibleHex))).forEach((block) => block.lines.map((l) => l.elements).forEach((elms) => elms.forEach((e) { if (_validHex.contains(e.text.substring(0, min(e.text.length, 2)))) captures.add(SequenceCapture.fromElement(e, square)); })));
-      SequenceGroup seqGroup = SequenceGroup(captures, square);
 
       await File(file.path).delete();
 
-      result.clear();
-      result.addAll(seqGroup.get().map((s) => s.sequence));
+      if (both) {
+        _matrix.clear();
+        _sequences.clear();
+        _matrix.addAll(SequenceGroup(captures, true, both).get().map((s) => s.sequence));
+        _sequences.addAll(SequenceGroup(captures, false, both).get().map((s) => s.sequence));
+      } else {
+        result.clear();
+        result.addAll(SequenceGroup(captures, square, both).get().map((s) => s.sequence));
+      }
 
       if (_matrix.length == 0 || (_matrix.any((row) => row.length != _matrix.length))) {
         throw Exception("Invalid matrix size: ${result.map((r) => r.length).fold(0, (a, b) => a + b)} elements parsed.");
@@ -205,17 +200,17 @@ class _MyAppState extends State<MyApp> {
 
   Map<String, String> _processing = {};
 
-  RawMaterialButton _parseButton(String text, String entity, Color strokeColor, Future<void> Function() onPressed) {
+  RawMaterialButton _parseButton(String text, String entity, Color strokeColor, Future<void> Function() onPressed, {fontSize: 20.0, padding: 5.0, opacity: 0.95}) {
     return RawMaterialButton(
         child: CustomPaint(
-            painter: CyberpunkButtonPainter(strokeColor: strokeColor, paintingStyle: PaintingStyle.fill),
+            painter: CyberpunkButtonPainter(strokeColor: strokeColor, paintingStyle: PaintingStyle.stroke),
             child: Padding(
-                padding: EdgeInsets.all(5),
+                padding: EdgeInsets.all(padding),
                 child: Text(_processing[entity] ?? text,
                     style: TextStyle(
-                        color: strokeColor.withOpacity(0.95),
+                        color: strokeColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 20,
+                        fontSize: fontSize,
                         fontFamily: GoogleFonts.rajdhani().fontFamily)))),
         onPressed: onPressed);
   }
@@ -282,10 +277,15 @@ class _MyAppState extends State<MyApp> {
                 SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
-                    child: AnimatedContainer(
+                    child: _parseButton('SCAN BREACH SCREEN', "Sequences", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
+                            () => _parseGroup("Both", "SCANNING...", null, false, true), fontSize: 25.0, padding: 10.0, opacity: 1.0)),
+                SizedBox(height: 8),
+                Padding(
+                    padding: EdgeInsets.all(0),
+                    child: _matrix.isNotEmpty ? AnimatedContainer(
                         duration: Duration(milliseconds: 10000),
-                        child: _parseButton('SCAN CODE MATRIX', "Matrix", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
-                            () => _parseGroup("Matrix", "UPLOADING CODE MATRIX", _matrix, true)))),
+                        child: _parseButton('RE-SCAN CODE MATRIX', "Matrix", _matrix.any((r) => r.contains("?")) ? AppColor.getInteractable() : AppColor.getNeutral(),
+                            () => _parseGroup("Matrix", "UPLOADING CODE MATRIX", _matrix, true, false))) : Container()),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Table(
@@ -307,8 +307,8 @@ class _MyAppState extends State<MyApp> {
                             .toList())),
                 Padding(
                     padding: EdgeInsets.all(0),
-                    child: _parseButton('SCAN SEQUENCES', "Sequences", _sequences.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
-                        () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false))),
+                    child: _sequences.isNotEmpty ? _parseButton('RE-SCAN SEQUENCES', "Sequences", AppColor.getInteractable(),
+                        () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false, false)) : Container()),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Table(
@@ -359,7 +359,7 @@ class _MyAppState extends State<MyApp> {
                                 : _solutionFound
                                     ? AppColor.getSuccess()
                                     : AppColor.getNeutral(),
-                        () => _calculatePath()))
+                        () => _calculatePath(), fontSize: 25.0))
                     ])),
                 Padding(
                     padding: EdgeInsets.all(0),
