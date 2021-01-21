@@ -115,7 +115,11 @@ class _MyAppState extends State<MyApp> {
 
   void loadBufferSize() async {
     _bufferSize = (await SharedPreferences.getInstance()).getInt("bufferSize");
-    _bufferSizeController = TextEditingController(text: _bufferSize ?? "");
+    if (_bufferSize != null) {
+      _bufferSizeController = TextEditingController(text: _bufferSize.toString());
+    } else {
+      _bufferSizeController = TextEditingController();
+    }
     _error["MISSING BUFFER SIZE"] = _bufferSize == null ? "Specify buffer size before calculating path." : "";
     setState(() {});
   }
@@ -124,8 +128,6 @@ class _MyAppState extends State<MyApp> {
 
   int _bufferSize;
   TextEditingController _bufferSizeController;
-
-
 
   final List<String> _validHex = ["1C", "FF", "E9", "BD", "55", "7A"];
 
@@ -157,21 +159,21 @@ class _MyAppState extends State<MyApp> {
 
       final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFilePath(file.path);
       final VisionText visionText = await _textRecognizer.processImage(visionImage);
-      // Ignore any blocks containing anything other than valid hexadecimal digits
-      SequenceGroup allSequences = SequenceGroup(
-          visionText.blocks
-              .toList()
-              .where((block) => block.text.split(" ").any((possibleHex) => _validHex.contains(possibleHex)))
-              .map((block) => SequenceCapture.fromBlock(block, square))
-              .toList(),
-          square);
+      List<SequenceCapture> captures = [];
+      visionText.blocks.where((block) => block.text.split(" ").any((possibleHex) => _validHex.contains(possibleHex))).forEach((block) => block.lines.map((l) => l.elements).forEach((elms) => elms.forEach((e) { if (_validHex.contains(e.text.substring(0, min(e.text.length, 2)))) captures.add(SequenceCapture.fromElement(e, square)); })));
+      SequenceGroup seqGroup = SequenceGroup(captures, square);
 
       await File(file.path).delete();
 
-      result.addAll(allSequences.get().map((seqGroup) => seqGroup.sequence));
+      result.clear();
+      result.addAll(seqGroup.get().map((s) => s.sequence));
 
-      if (result.length == 0 || (square && result.any((row) => row.length != result.length))) {
+      if (_matrix.length == 0 || (_matrix.any((row) => row.length != _matrix.length))) {
         throw Exception("Invalid matrix size: ${result.map((r) => r.length).fold(0, (a, b) => a + b)} elements parsed.");
+      }
+
+      if (_sequences.length == 0) {
+        throw Exception("No sequences parsed.");
       }
     } catch (e) {
       result.clear();

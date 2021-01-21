@@ -85,6 +85,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.0.2"
+  extended_math:
+    dependency: "direct main"
+    description:
+      name: extended_math
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.0.29+1"
   fake_async:
     dependency: transitive
     description:
