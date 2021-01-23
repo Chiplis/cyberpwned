@@ -137,8 +137,8 @@ class _MyAppState extends State<MyApp> {
       }
 
       _processing[entity] = processingMsg;
-      _error["BOTH PARSE ERROR"] = "";
-      _error["${entity.toUpperCase()} PARSE ERROR"] = "";
+      _error["SCREEN SCAN ERROR"] = "";
+      _error["${entity.toUpperCase()} SCAN ERROR"] = "";
       _error["exception"] = "";
       _solution = TraversedPath([]);
       _solutionFound = false;
@@ -149,7 +149,11 @@ class _MyAppState extends State<MyApp> {
       final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFilePath(file.path);
       final VisionText visionText = await _textRecognizer.processImage(visionImage);
       List<SequenceCapture> captures = [];
-      visionText.blocks.where((block) => block.text.split(" ").any((possibleHex) => _validHex.contains(possibleHex))).forEach((block) => block.lines.map((l) => l.elements).forEach((elms) => elms.forEach((e) { if (_validHex.contains(e.text.substring(0, min(e.text.length, 2)))) captures.add(SequenceCapture.fromElement(e, square)); })));
+      visionText.blocks.where((block) => block.text.split(" ").any((possibleHex) => _validHex.contains(possibleHex))).forEach((block) =>
+          block.lines.map((l) => l.elements).forEach((elms) =>
+              elms.forEach((e) {
+                if (_validHex.contains(e.text.substring(0, min(e.text.length, 2)))) captures.add(SequenceCapture.fromElement(e, square));
+              })));
 
       await File(file.path).delete();
 
@@ -158,22 +162,29 @@ class _MyAppState extends State<MyApp> {
         _sequences.clear();
         _matrix.addAll(SequenceGroup(captures, true, both).get().map((s) => s.sequence));
         _sequences.addAll(SequenceGroup(captures, false, both).get().map((s) => s.sequence));
+        _error["MATRIX SCAN ERROR"] = "";
+        _error["SEQUENCE SCAN ERROR"] = "";
       } else {
         result.clear();
-        result.addAll(SequenceGroup(captures, square, both).get().map((s) => s.sequence));
+        var x = SequenceGroup(captures, square, both).get().map((s) => s.sequence);
+        result.addAll(x);
       }
 
       if (_matrix.length == 0 || (_matrix.any((row) => row.length != _matrix.length))) {
-        throw Exception("Invalid matrix size: ${result.map((r) => r.length).fold(0, (a, b) => a + b)} elements parsed.");
+        var e = Exception("Invalid matrix size: ${_matrix.map((r) => r.length).fold(0, (a, b) => a + b)} elements parsed.");
+        _matrix.clear();
+        throw e;
       }
 
       if (_sequences.length == 0) {
-        throw Exception("No sequences parsed.");
+        var e = Exception("No sequences parsed.");
+        _sequences.clear();
+        throw e;
       }
-    } catch (e) {
-      result.clear();
-      _error["${entity.toUpperCase()} PARSE ERROR"] = Solution.parseError(entity);
-      _error["exception"] = e.message;
+    } on Exception catch(e) {
+      if (result != null) result.clear();
+      _error["${entity.toUpperCase()} SCAN ERROR"] = Solution.parseError(entity);
+      _error["exception"] = e.toString();
     }
     _processing[entity] = null;
     verifyValidMatrix();
@@ -278,14 +289,14 @@ class _MyAppState extends State<MyApp> {
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: _parseButton('SCAN BREACH SCREEN', "Sequences", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
-                            () => _parseGroup("Both", "SCANNING...", null, false, true), fontSize: 25.0, padding: 10.0, opacity: 1.0)),
+                            () => _parseGroup("Screen", "SCANNING SCREEN...", null, false, true), fontSize: 25.0, padding: 10.0, opacity: 1.0)),
                 SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: _matrix.isNotEmpty ? AnimatedContainer(
                         duration: Duration(milliseconds: 10000),
                         child: _parseButton('RE-SCAN CODE MATRIX', "Matrix", _matrix.any((r) => r.contains("?")) ? AppColor.getInteractable() : AppColor.getNeutral(),
-                            () => _parseGroup("Matrix", "UPLOADING CODE MATRIX", _matrix, true, false))) : Container()),
+                            () => _parseGroup("Matrix", "SCANNING CODE MATRIX...", _matrix, true, false))) : Container()),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Table(
@@ -308,14 +319,14 @@ class _MyAppState extends State<MyApp> {
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: _sequences.isNotEmpty ? _parseButton('RE-SCAN SEQUENCES', "Sequences", AppColor.getInteractable(),
-                        () => _parseGroup("Sequences", "UPLOADING SEQUENCES...", _sequences, false, false)) : Container()),
+                        () => _parseGroup("Sequence", "SCANNING SEQUENCES...", _sequences, false, false)) : Container()),
                 Padding(
                     padding: EdgeInsets.all(0),
                     child: Table(
                         children: _sequences
                             .map((seq) =>
                                 // Make all rows the same length to prevent rendering error. TODO: Find a layout which removes the need for doing this
-                                seq + List.filled(max(0, _sequences.map((r) => r.length).fold(0, max) - seq.length), ""))
+                                seq + List.filled(max(5, _sequences.map((r) => r.length).fold(0, max)) - seq.length, ""))
                             .toList()
                             .asMap()
                             .entries
@@ -324,22 +335,25 @@ class _MyAppState extends State<MyApp> {
                                     .map((elm) => elm.key >= 0
                                         ? Padding(
                                             padding: EdgeInsets.symmetric(vertical: 2),
-                                            child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize,
-                                                    CellGroup([sequence.value], _sequencesState), _solution, _matrix)
-                                                .render())
+                                            child: DisplayCell.forSequence(sequence.key, elm.key, _bufferSize, _sequences.getRow(sequence.key), _solution, _matrix, _solutionFound)
+                                                .render(callback: () {
+                                                  _solutionFound = false;
+                                                  setState((){});
+                                                }))
                                         : Padding(
-                                            padding: EdgeInsets.symmetric(horizontal: 2),
-                                            child: DisplayCell.forToggle(null, null, _bufferSize, null, _solution, null).render(
-                                                _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ?? true ? "✓" : "✗",
-                                                _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ?? true
+                                            padding: EdgeInsets.symmetric(vertical: 2),
+                                            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Container(height: 52.0, width: 52.0, child: DisplayCell.forToggle(null, null, _bufferSize, null, _solution, null).render(
+                                                elm: _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ?? true ? "✓" : "✗",
+                                                color: _sequencesState[sequence.value.where((e) => e != "").toList().toString()] ?? true
                                                     ? AppColor.getInteractable()
-                                                    : AppColor.getDeactivated(), () async {
+                                                    : AppColor.getDeactivated(),
+                                                    onTap: () async {
                                               _solutionFound = false;
-                                              var key = sequence.value.where((e) => e != "").toList().toString();
+                                              var key = sequence.value.where((e) => e != "" && e != "-").toList().toString();
                                               var enabled = _sequencesState[key];
                                               _sequencesState[key] = !(enabled == null || enabled);
                                               setState(() {});
-                                            })))
+                                            }))])))
                                     .toList()))
                             .toList())),
                 Padding(
@@ -387,7 +401,7 @@ class _MyAppState extends State<MyApp> {
       "bufferSize": _bufferSize,
       "matrix": _matrix,
       "sequences": CellGroup(
-          _sequences.where((element) => _sequencesState[element.toString()] == null || _sequencesState[element.toString()]).toList(), _sequencesState)
+          _sequences.map((row) => row.where((element) => element != "" && element != "-").toList()).where((element) => _sequencesState[element.toString()] == null || _sequencesState[element.toString()]).toList(), _sequencesState)
     }).then((solution) {
       _solution = solution;
       _solutionFound = true;

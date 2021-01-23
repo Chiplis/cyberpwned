@@ -65,6 +65,10 @@ class CellGroup implements Iterable<Iterable<String>> {
     return _group[r][c];
   }
 
+  List<String> getRow(int r) {
+    return _group[r];
+  }
+
   void set(int r, int c, String v) {
     _group[r][c] = v;
   }
@@ -189,10 +193,6 @@ class CellGroup implements Iterable<Iterable<String>> {
   Iterable<T> whereType<T>() {
     return _group.whereType();
   }
-
-  List<String> getRow(int i) {
-    return _group[i];
-  }
 }
 
 enum CellType { MATRIX, SEQUENCE, TOGGLE }
@@ -203,15 +203,16 @@ class DisplayCell {
   int bufferSize;
   TraversedPath solution;
   bool showIndex = false;
-  CellGroup sequences;
+  List<String> sequences;
   CellGroup matrix;
   CellType _cellType;
+  bool solutionFound;
 
   DisplayCell.forMatrix(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = true}) {
     this._cellType = CellType.MATRIX;
   }
 
-  DisplayCell.forSequence(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, {this.showIndex = false}) {
+  DisplayCell.forSequence(this.x, this.y, this.bufferSize, this.sequences, this.solution, this.matrix, this.solutionFound, {this.showIndex = false}) {
     this._cellType = CellType.SEQUENCE;
   }
 
@@ -233,18 +234,16 @@ class DisplayCell {
   Color _colorForCell() {
     if (bufferSize == null) return AppColor.getDeactivated();
     if (_cellType == CellType.SEQUENCE) {
-      if (!(matrix.state[sequences.getRow(0).where((e) => e != "").toList().toString()] == null || matrix.state[sequences.getRow(0).where((e) => e != "").toList().toString()])) {
+      if (!(matrix.state[sequences.where((e) => e != "").toList().toString()] == null || matrix.state[sequences.where((e) => e != "").toList().toString()])) {
         return AppColor.getDeactivated();
       }
     }
     if (solution.coords.isEmpty) return AppColor.getInteractable();
-    if (solution.coords.length > bufferSize) return AppColor.getInteractable();
+    if (solution.coords.length > bufferSize || !solutionFound) return AppColor.getInteractable();
 
     if (_cellType == CellType.SEQUENCE) {
-      for (List<String> sequence in sequences) {
-        if (SequenceScore(sequence.where((element) => element.isNotEmpty), bufferSize).isCompletedBy(solution, matrix)) {
-          return AppColor.getSuccess();
-        }
+      if (SequenceScore(sequences.where((element) => element.isNotEmpty && element != "-"), bufferSize).isCompletedBy(solution, matrix)) {
+        return AppColor.getSuccess();
       }
       return AppColor.getFailure();
     } else if (_cellType != CellType.SEQUENCE) {
@@ -252,21 +251,62 @@ class DisplayCell {
     }
     return AppColor.getInteractable();
   }
+  List<String> _items = ['1C', '55', 'FF', '7A', 'BD', 'E9', '-'];
 
-  Widget render([String elm, Color color, onTap]) {
+  Widget render({String elm, Color color, onTap, void Function() callback}) {
+    if (matrix == null) {
+      return InkWell(
+          onTap: onTap,
+          child: AnimatedContainer(
+              decoration: BoxDecoration(color: color?.withOpacity(0.3) ?? _colorForCell().withOpacity(0.3),
+                  border: _cellType == CellType.MATRIX
+                      ? Border.all(color: color ?? _colorForCell(), width: 2)
+                      : Border.symmetric(horizontal: BorderSide(color: color ?? _colorForCell(), width: 2))),
+              duration: Duration(milliseconds: 300),
+              child: Text(
+                  elm ?? (showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences[y])),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: color ?? _colorForCell(),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: GoogleFonts
+                          .rajdhani()
+                          .fontFamily))));
+    }
+    TextStyle style = TextStyle(
+        color: _colorForCell(),
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+        fontFamily: GoogleFonts.rajdhani().fontFamily);
+    var value = y >= sequences.length ? "" : sequences[y];
+    value = value == "" ? "-" : value;
     return InkWell(
         onTap: onTap,
         child: AnimatedContainer(
-            decoration: BoxDecoration(color: color?.withOpacity(0.3) ?? _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX || _cellType == CellType.TOGGLE ? Border.all(color: color ?? _colorForCell(), width: 2) : Border.symmetric(horizontal: BorderSide(color: color ?? _colorForCell(), width: 2))),
+            decoration: BoxDecoration(color: color?.withOpacity(0.3) ?? _colorForCell().withOpacity(0.3), border: _cellType == CellType.MATRIX ? Border.all(color: color ?? _colorForCell(), width: 2) : Border.symmetric(horizontal: BorderSide(color: color ?? _colorForCell(), width: 2))),
             duration: Duration(milliseconds: 300),
-            child: Text(
-                elm ?? (showIndex ? (_isPartOfSolution() ?? matrix.get(x, y)) : (_cellType == CellType.MATRIX ? matrix.get(x, y) : sequences.get(0, y))),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: color ?? _colorForCell(),
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: GoogleFonts.rajdhani().fontFamily))));
+            child: DropdownButtonHideUnderline(child: DropdownButton(
+                value: value,
+                style: style,
+                isExpanded: true,
+                iconSize: 0,
+                onChanged: (String newValue) {
+                  if (_items.contains(newValue)) {
+                    if (y >= sequences.length) {
+                      this.sequences.add(newValue);
+                    } else {
+                      this.sequences[y] = newValue;
+                    }
+                  }
+                  if (callback != null) callback();
+                },
+                items: _items.map((String each) {
+                  return DropdownMenuItem<String>(
+                    value: each,
+                    child: Container(alignment: Alignment.center, child: Text(each, style: style, textAlign: TextAlign.center)),
+                  );
+                }).toList()))));
   }
 }
 

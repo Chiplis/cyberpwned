@@ -46,12 +46,9 @@ class SequenceGroup {
 
     if (both) _divide(square);
 
-    double minLeft = _group.map((g) => g.left).reduce(min);
-    double maxRight = _group.map((g) => g.right).reduce(max);
-
     int size = sqrt(_group.map((s) => s.sequence.length).fold(0, (a, b) => a + b)).round();
 
-    sortGroup(size, square);
+    if (square) sortGroup(size); else _group.sort((a, b) => a.top.compareTo(b.top));
 
     List<SequenceCapture> result = [];
     List<SequenceCapture> partial = [];
@@ -61,7 +58,7 @@ class SequenceGroup {
       if (square && partial.map((s) => s.sequence.length).fold(0, (a, b) => a + b) == size) {
         result.add(partial.reduce((a, b) => a + b));
         partial.clear();
-      } else if (partial.isNotEmpty && partial.last.left > current.left && partial.last.top + partial.last.height() * 1.25 < current.top) {
+      } else if (partial.isNotEmpty && partial.map((p) => p.bottom).reduce(max) < current.top) {
         _complete(partial, size);
         result.add(partial.reduce((a, b) => a + b));
         partial.clear();
@@ -77,7 +74,7 @@ class SequenceGroup {
     ordered = true;
   }
 
-  sortGroup(int size, bool square) {
+  sortGroup(int size) {
     var keypoints = _group;
     List<SequenceCapture> points = [];
     int hold = 0;
@@ -94,7 +91,7 @@ class SequenceGroup {
         var p = Vector([k.left, k.top, 0]);
         var d = sqrt((k.right - k.left) * (k.bottom - k.top));
         var dist = ((p - a).cross(b - a)).euclideanNorm() / b.euclideanNorm();
-        if (d / (square ? 2 : 4) + hold > dist) {
+        if (d / 2 + hold > dist) {
           rowPoints.add(k);
           rowPoints.sort((a, b) => a.left.compareTo(b.left));
         } else {
@@ -122,10 +119,10 @@ class SequenceGroup {
     for (SequenceCapture a in _group) {
       var found = false;
       for (SequenceCapture b in result) {
-        if ((a.right - b.right).abs() + (a.top - b.top).abs() < (square ? 75 : 50) ||
-            (a.bottom - b.bottom).abs() + (a.left - b.left).abs() < (square ? 75 : 50) ||
-            (a.right - b.right).abs() + (a.bottom - b.bottom).abs() < (square ? 75 : 50) ||
-            (a.left - b.left).abs() + (a.top - b.top).abs() < (square ? 75 : 50)) {
+        if ((a.right - b.right).abs() + (a.top - b.top).abs() < (square ? 100 : 50) ||
+            (a.bottom - b.bottom).abs() + (a.left - b.left).abs() < (square ? 100 : 50) ||
+            (a.right - b.right).abs() + (a.bottom - b.bottom).abs() < (square ? 100 : 50) ||
+            (a.left - b.left).abs() + (a.top - b.top).abs() < (square ? 100 : 50)) {
           found = true;
           break;
         }
