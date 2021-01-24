@@ -119,10 +119,10 @@ class SequenceGroup {
     for (SequenceCapture a in _group) {
       var found = false;
       for (SequenceCapture b in result) {
-        if ((a.right - b.right).abs() + (a.top - b.top).abs() < (square ? 100 : 50) ||
-            (a.bottom - b.bottom).abs() + (a.left - b.left).abs() < (square ? 100 : 50) ||
-            (a.right - b.right).abs() + (a.bottom - b.bottom).abs() < (square ? 100 : 50) ||
-            (a.left - b.left).abs() + (a.top - b.top).abs() < (square ? 100 : 50)) {
+        if ((a.right - b.right).abs() + (a.top - b.top).abs() < (square ? 125 : 50) ||
+            (a.bottom - b.bottom).abs() + (a.left - b.left).abs() < (square ? 125 : 50) ||
+            (a.right - b.right).abs() + (a.bottom - b.bottom).abs() < (square ? 125 : 50) ||
+            (a.left - b.left).abs() + (a.top - b.top).abs() < (square ? 125 : 50)) {
           found = true;
           break;
         }

@@ -91,6 +91,8 @@ class _MyAppState extends State<MyApp> {
 
   String appID = "";
 
+  bool _firstScan = true;
+
   @override
   void initState() {
     _matrix = CellGroup([], _sequencesState);
@@ -181,12 +183,17 @@ class _MyAppState extends State<MyApp> {
         _sequences.clear();
         throw e;
       }
+
+      if (_bufferSize != null && both) {
+        _computeSolution("CALCULATING OPTIMAL PATH...", "path");
+      }
     } on Exception catch(e) {
       if (result != null) result.clear();
       _error["${entity.toUpperCase()} SCAN ERROR"] = Solution.parseError(entity);
       _error["exception"] = e.toString();
     }
     _processing[entity] = null;
+    _firstScan = false;
     verifyValidMatrix();
   }
 
@@ -288,12 +295,12 @@ class _MyAppState extends State<MyApp> {
                 SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
-                    child: _parseButton('SCAN BREACH SCREEN', "Sequences", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
+                    child: _parseButton(_processing["Screen"] ?? 'SCAN BREACH SCREEN', "Sequences", _matrix.isEmpty ? AppColor.getInteractable() : AppColor.getNeutral(),
                             () => _parseGroup("Screen", "SCANNING SCREEN...", null, false, true), fontSize: 25.0, padding: 10.0, opacity: 1.0)),
                 SizedBox(height: 8),
                 Padding(
                     padding: EdgeInsets.all(0),
-                    child: _matrix.isNotEmpty ? AnimatedContainer(
+                    child: (_matrix.isNotEmpty || !_firstScan) ? AnimatedContainer(
                         duration: Duration(milliseconds: 10000),
                         child: _parseButton('RE-SCAN CODE MATRIX', "Matrix", _matrix.any((r) => r.contains("?")) ? AppColor.getInteractable() : AppColor.getNeutral(),
                             () => _parseGroup("Matrix", "SCANNING CODE MATRIX...", _matrix, true, false))) : Container()),
@@ -318,7 +325,7 @@ class _MyAppState extends State<MyApp> {
                             .toList())),
                 Padding(
                     padding: EdgeInsets.all(0),
-                    child: _sequences.isNotEmpty ? _parseButton('RE-SCAN SEQUENCES', "Sequences", AppColor.getInteractable(),
+                    child: (_sequences.isNotEmpty || !_firstScan) ? _parseButton('RE-SCAN SEQUENCES', "Sequences", AppColor.getInteractable(),
                         () => _parseGroup("Sequence", "SCANNING SEQUENCES...", _sequences, false, false)) : Container()),
                 Padding(
                     padding: EdgeInsets.all(0),
