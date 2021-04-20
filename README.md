@@ -4,7 +4,7 @@ Cyberpunk 2077 Hacking Minigame Resolver - Play Store: https://play.google.com/s
 
 ## Requirements
     - Flutter
-        - Currently tested with version 1.22.5
+        - Currently tested with version 2.0
         - https://flutter.dev/
     - A personal Firebase project
         - Required to get a valid google-services.json file
