@@ -1,8 +1,5 @@
 import 'dart:math';
 
-import 'package:extended_math/extended_math.dart';
-import 'package:firebase_ml_vision/firebase_ml_vision.dart';
-
 class IncompleteSequenceException implements Exception {}
 
 class SequenceGroup {

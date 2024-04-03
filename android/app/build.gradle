@@ -31,8 +31,28 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null) {
+                    namespace "com.nicolassiplis.cyberpwned"
+                }
+            }
+        }
+    }
+}
+
 android {
-    compileSdkVersion 30
+
+    namespace "com.nicolassiplis.cyberpwned"
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -46,7 +66,8 @@ android {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.nicolassiplis.cyberpwned"
         minSdkVersion 23
-        targetSdkVersion 30
+        targetSdkVersion 34
+        compileSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

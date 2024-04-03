@@ -6,7 +6,7 @@
          additional functionality it is fine to subclass or reimplement
          FlutterApplication and put your custom class here. -->
     <application
-        android:name="io.flutter.app.FlutterApplication"
+        android:name="${applicationName}"
         android:label="Cyberpwned"
         android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/launcher_icon">
@@ -55,5 +55,4 @@
         </intent>
     </queries>
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
 </manifest>
